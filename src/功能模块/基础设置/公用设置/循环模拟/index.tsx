@@ -29,6 +29,7 @@ const 太玄经循环模拟 = React.lazy(() => import('./心法循环模拟/太�
 const 分山劲循环模拟 = React.lazy(() => import('./心法循环模拟/分山劲'))
 // const 焚影圣诀循环模拟 = React.lazy(() => import('./心法循环模拟/焚影圣诀'))
 const 天罗诡道循环模拟 = React.lazy(() => import('./心法循环模拟/天罗诡道'))
+const 太玄经_悟循环模拟 = React.lazy(() => import('./心法循环模拟/太玄经_悟'))
 const 支持循环心法 = {
   山海心诀: '山海心诀',
   孤锋诀: '孤锋诀',
@@ -45,6 +46,7 @@ const 支持循环心法 = {
   分山劲: '分山劲',
   // 焚影圣诀: '焚影圣诀',
   天罗诡道: '天罗诡道',
+  太玄经_悟: '太玄经_悟',
 }
 
 const { 名称 } = 获取当前数据()
@@ -65,6 +67,7 @@ function 循环模拟() {
   const [加速值, 更新加速值] = useState<number>(0)
   const [网络延迟, 更新网络延迟] = useState<number>(0)
   const [启用团队增益快照, 更新启用团队增益快照] = useState<boolean>(false)
+  const [高亮团队快照, 更新高亮团队快照] = useState<string[]>([])
   const [奇穴信息, 更新奇穴信息] = useState<string[]>([])
   const [秘籍信息, 更新秘籍信息] = useState<选中秘籍信息>({})
   const [奇穴弹窗展示, 更新奇穴弹窗展示] = useState<boolean>(false)
@@ -127,6 +130,7 @@ function 循环模拟() {
       太玄经: 太玄经循环模拟,
       分山劲: 分山劲循环模拟,
       天罗诡道: 天罗诡道循环模拟,
+      太玄经_悟: 太玄经_悟循环模拟,
       // 焚影圣诀: <焚影圣诀循环模拟 打开循环模拟器={打开循环模拟器} />,
     }
     return CycleMap[名称] || <></>
@@ -169,6 +173,8 @@ function 循环模拟() {
               更新秘籍信息,
               增益启用,
               更新增益启用,
+              高亮团队快照,
+              更新高亮团队快照,
             }}
           >
             <CycleComponent 打开循环模拟器={打开循环模拟器} />

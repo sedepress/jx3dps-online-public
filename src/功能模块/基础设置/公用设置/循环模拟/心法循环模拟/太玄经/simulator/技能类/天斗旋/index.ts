@@ -4,12 +4,11 @@ import { 每秒郭氏帧 } from '@/数据/常量'
 import 有CD技能通用类 from '../../通用类/有CD技能通用类'
 
 class 天斗旋 extends 有CD技能通用类 {
-  // scripts/skill/北天药宗/北天药宗_商陆其根.lua
   static 技能数据 = 循环模拟技能基础数据?.find((item) => item.技能名称 === '天斗旋')
   static 作用总间隔 = 24
   static 读条时间 = 24
   static 本次释放是否读条 = true
-  static 释放重置 = false
+  static 触发橙武 = false
   static 触发知微 = false
 
   constructor(模拟循环) {
@@ -19,7 +18,7 @@ class 天斗旋 extends 有CD技能通用类 {
   }
 
   释放前初始化() {
-    天斗旋.释放重置 = false
+    天斗旋.触发橙武 = false
     天斗旋.本次释放是否读条 = false
     天斗旋.触发知微 = false
 
@@ -40,7 +39,7 @@ class 天斗旋 extends 有CD技能通用类 {
     this.保存释放记录('天斗旋')
 
     if (this.模拟循环.当前自身buff列表?.['橙武']?.当前层数) {
-      天斗旋.释放重置 = true
+      天斗旋.触发橙武 = true
     }
 
     if (技能索引 == 0) {
@@ -121,8 +120,12 @@ class 天斗旋 extends 有CD技能通用类 {
   知微处理() {
     if (天斗旋.触发知微) {
       this.模拟循环.技能类实例集合?.DOT_知微?.引爆并重新刷新(1, '天斗旋')
-      this.模拟循环.卸除buff({ 名称: '知微', 对象: '自身' })
+      this.模拟循环.技能类实例集合?.DOT_知微?.引爆并重新刷新(1, '天斗旋')
       this.模拟循环.技能类实例集合?.DOT_知微?.获得和刷新DOT_知微()
+
+      if (!天斗旋.触发橙武) {
+        this.模拟循环.卸除buff({ 名称: '知微', 对象: '自身' })
+      }
     }
   }
 
@@ -149,12 +152,13 @@ class 天斗旋 extends 有CD技能通用类 {
       this.灵器伤害()
       this.亘天伤害()
       this.橙武伤害('神兵·循环天转')
+      this.知微处理()
       this.模拟循环.卸除buff({ 名称: '镇星入舆_斗', 对象: '自身' })
     }
   }
 
   释放后() {
-    if (天斗旋.释放重置) {
+    if (天斗旋.触发橙武) {
       this.重置调息时间()
     }
   }
