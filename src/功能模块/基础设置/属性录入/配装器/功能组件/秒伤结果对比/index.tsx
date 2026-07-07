@@ -1,13 +1,15 @@
 import React, { useEffect } from 'react'
 import { 数据埋点 } from '@/工具函数/tools/log'
+import { 整数千分位转换 } from '@/工具函数/help'
 
 function 秒伤结果对比({ 配装器内动态新秒伤, 打开配装器时秒伤 }) {
   const 百分比变化率 = (((配装器内动态新秒伤 - 打开配装器时秒伤) / 打开配装器时秒伤) * 100).toFixed(
-    2
+    2,
   )
   const 秒伤增加 = 配装器内动态新秒伤 > 打开配装器时秒伤
 
   const 加速符不合文案 = () => <p className={'dps-diff-error-text'}>加速不符合循环需求</p>
+  const 展示秒伤 = (秒伤) => (秒伤 ? 整数千分位转换(秒伤) : <加速符不合文案 />)
 
   useEffect(() => {
     if (打开配装器时秒伤 !== 配装器内动态新秒伤 && 配装器内动态新秒伤 && 打开配装器时秒伤) {
@@ -20,7 +22,7 @@ function 秒伤结果对比({ 配装器内动态新秒伤, 打开配装器时秒
       <div className={'dps-diff'}>
         <div className='dps-diff-item'>
           <div className='dps-diff-title'>更换前</div>
-          <p className='dps-diff-dps'>{打开配装器时秒伤 ? 打开配装器时秒伤 : <加速符不合文案 />}</p>
+          <p className='dps-diff-dps'>{展示秒伤(打开配装器时秒伤)}</p>
         </div>
         <div className='dps-diff-item'>
           <div className='dps-diff-header'>
@@ -33,7 +35,7 @@ function 秒伤结果对比({ 配装器内动态新秒伤, 打开配装器时秒
             ) : null}
           </div>
           <p className={`dps-diff-dps ${秒伤增加 ? 'dps-up-color' : 'dps-low-color'}`}>
-            {配装器内动态新秒伤}
+            {整数千分位转换(配装器内动态新秒伤)}
           </p>
         </div>
       </div>
@@ -41,7 +43,7 @@ function 秒伤结果对比({ 配装器内动态新秒伤, 打开配装器时秒
       <div className={'dps-diff'}>
         <div className='dps-diff-item'>
           <div className='dps-diff-title'>更换前</div>
-          <p className='dps-diff-dps'>{打开配装器时秒伤 ? 打开配装器时秒伤 : <加速符不合文案 />}</p>
+          <p className='dps-diff-dps'>{展示秒伤(打开配装器时秒伤)}</p>
         </div>
         <div className='dps-diff-item'>
           <div className='dps-diff-header'>

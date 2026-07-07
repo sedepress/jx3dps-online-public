@@ -7,6 +7,7 @@ import * as G2 from '@antv/g2'
 import { useAppSelector } from '@/hooks'
 import 获取当前数据 from '@/数据/数据工具/获取当前数据'
 import { 获取技能统计数据 } from '../结果统计/util'
+import { 整数千分位转换 } from '@/工具函数/help'
 import './index.css'
 
 const { 系统配置 } = 获取当前数据()
@@ -22,16 +23,12 @@ function 技能统计图表(_, ref) {
   const getDataSource = () => {
     const res = 获取技能统计数据(当前计算结果, true) || []
 
-    res.sort((a, b) => {
-      return a.技能总输出 - b.技能总输出
-    })
-
     return res.map((item) => {
       return {
         ...item,
-        技能数量: Number.isInteger(item.技能数量) ? item.技能数量 : item.技能数量.toFixed(2),
+        技能数量: 整数千分位转换(item.技能数量),
         key: item.显示名称 || item?.技能名称 || item.统计名称,
-        技能总输出: Math.floor(item.技能总输出) || 0,
+        技能总输出: Math.round(item.技能总输出) || 0,
         会心期望: `${item.会心几率 ? (item.会心几率 * 100).toFixed(2) : 0}%`,
         技能比例: `${((item.技能总输出 / 当前计算结果?.总伤) * 100).toFixed(2)}%`,
       }
@@ -89,7 +86,7 @@ function 技能统计图表(_, ref) {
       },
     })
     chart.axis('技能总输出', false)
-    chart.coordinate().transpose()
+    chart.coordinate().transpose().reflect('y')
     chart
       .interval()
       .position('key*技能总输出')

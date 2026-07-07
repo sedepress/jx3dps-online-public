@@ -5,6 +5,7 @@ import { 秒伤计算 } from '@/计算模块/计算函数'
 import 获取当前数据 from '@/数据/数据工具/获取当前数据'
 import { 阵眼数据类型 } from '@/数据/阵眼/interface'
 import { GLOBAL_CDN_PREFIX } from '@/工具函数/const'
+import { 整数千分位转换 } from '@/工具函数/help'
 import './index.css'
 
 const PaiMingMap = {
@@ -119,7 +120,7 @@ const 阵眼选择: React.FC<阵眼选择类型> = (props) => {
                       : ''
                   }`}
                 >
-                  {item.伤害提升百分比?.toFixed(2)}%
+                  {整数千分位转换(item.伤害提升百分比 || 0)}%
                 </span>
               ) : null}
             </div>

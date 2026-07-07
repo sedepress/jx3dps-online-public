@@ -7,6 +7,7 @@ import useCycle from '@/hooks/use-cycle'
 import { 阵眼数据类型 } from '@/数据/阵眼/interface'
 import { 延迟设定 } from '@/数据/常量'
 import { 小药小吃数据类型 } from '@/@types/小药小吃'
+import { 整数千分位转换 } from '@/工具函数/help'
 import 配装推荐 from './配装推荐'
 import styles from './index.module.less'
 import ExportContext from '../context'
@@ -75,7 +76,7 @@ const 秒伤区 = () => {
       <div className={styles.header}>
         <div className={styles.dps}>
           <h1 className={styles.dpsNum}>
-            {是否展示伤害 ? 更换装备后秒伤 || 当前计算结果?.秒伤 : '-------'}
+            {是否展示伤害 ? 整数千分位转换(更换装备后秒伤 || 当前计算结果?.秒伤) : '-------'}
           </h1>
           <span className={styles.dpsTip}>数值仅供参考</span>
         </div>

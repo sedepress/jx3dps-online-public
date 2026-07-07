@@ -8,6 +8,7 @@ import { 角色基础属性类型 } from '@/@types/角色'
 import { 秒伤计算 } from '@/计算模块/计算函数'
 import 获取当前数据 from '@/数据/数据工具/获取当前数据'
 import { 数据埋点 } from '@/工具函数/tools/log'
+import { 整数千分位转换 } from '@/工具函数/help'
 
 import 根据装备信息获取基础属性, {
   五彩石计算,
@@ -150,7 +151,7 @@ function 最佳五彩石设置({ 一键替换五彩石, 对比秒伤, 对比装�
             <div className='max-wucaishi-wrap-content'>
               <div className='max-wucaishi-content'>
                 <h1 className={'max-wucaishi-title'}>替换前</h1>
-                <h1 className='max-wucaishi-dps dps-low-color'>{对比秒伤}</h1>
+                <h1 className='max-wucaishi-dps dps-low-color'>{整数千分位转换(对比秒伤)}</h1>
                 <div>
                   <div className={`max-wucaishi-item`}>
                     <span className='max-wucaishi-value'>{对比装备信息?.五彩石 || '无五彩石'}</span>
@@ -160,7 +161,7 @@ function 最佳五彩石设置({ 一键替换五彩石, 对比秒伤, 对比装�
               <div className='max-wucaishi-content'>
                 <h1 className={'max-wucaishi-title'}>替换为最佳后</h1>
                 <h1 className='max-wucaishi-dps dps-up-color'>
-                  {最大Dps}
+                  {整数千分位转换(最大Dps)}
                   <RiseOutlined className='max-wucaishi-dps-icon' />
                 </h1>
                 <div>
@@ -234,6 +235,7 @@ function 最佳五彩石设置({ 一键替换五彩石, 对比秒伤, 对比装�
                 sorter: (a: any, b: any) => {
                   return (b.秒伤 || 0) - (a.秒伤 || 0)
                 },
+                render: (value) => 整数千分位转换(value),
               },
               {
                 key: '操作',

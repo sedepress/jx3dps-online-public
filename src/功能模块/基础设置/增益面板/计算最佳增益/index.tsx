@@ -7,6 +7,7 @@ import { 秒伤计算 } from '@/计算模块/计算函数'
 import 获取当前数据 from '@/数据/数据工具/获取当前数据'
 import { 数据埋点 } from '@/工具函数/tools/log'
 import { 增益选项数据类型 } from '@/@types/团队增益'
+import { 整数千分位转换 } from '@/工具函数/help'
 
 import { 初始化所有组合, 计算部位枚举 } from './util'
 import './index.css'
@@ -259,7 +260,7 @@ function 计算最佳增益({ 保存数据并计算 }) {
         <div className={'max-gain-wrap'}>
           <div className='max-gain-content'>
             <h1 className={'max-gain-title'}>替换前</h1>
-            <h1 className='max-gain-dps'>{当前秒伤}</h1>
+            <h1 className='max-gain-dps'>{整数千分位转换(当前秒伤)}</h1>
             <div>
               {Object.keys(当前增益展示).map((key, index) => {
                 return (
@@ -274,7 +275,7 @@ function 计算最佳增益({ 保存数据并计算 }) {
           <div className='max-gain-content'>
             <h1 className={'max-gain-title'}>替换后</h1>
             <h1 className='max-gain-dps dps-up-color'>
-              {最大Dps}
+              {整数千分位转换(最大Dps)}
               <RiseOutlined className='max-gain-dps-icon' />
             </h1>
             <div>

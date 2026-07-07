@@ -20,6 +20,7 @@ import { 秒伤计算 } from '@/计算模块/计算函数'
 import { 装备部位枚举 } from '@/@types/枚举'
 import { 获取装备数据描述 } from '../../配装器/功能组件/装备选择/装备部位选择'
 import 导入交易行价格弹窗 from './导入交易行价格弹窗'
+import { 整数千分位转换 } from '@/工具函数/help'
 import './index.css'
 import { 展示装备数据列表类型 } from './interface'
 
@@ -157,7 +158,7 @@ const 识别装备对比: React.FC<ModalProps> = () => {
         }`}
       >
         {data > 0 ? `+` : ''}
-        {data == 0 || data === undefined ? '-' : data}
+        {data == 0 || data === undefined ? '-' : 整数千分位转换(data)}
         {data > 0 ? `（${((data / 当前计算结果?.秒伤) * 100).toFixed(1)}%）` : ''}
       </div>
     )

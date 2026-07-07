@@ -5,17 +5,19 @@ import { 选中秘籍信息 } from '@/@types/秘籍'
 import { 属性加成 } from '@/@types/属性'
 import { 增益选项数据类型 } from '@/@types/团队增益'
 import { 装备信息数据类型 } from '@/@types/装备'
-import { 循环技能详情, 循环详情 } from '@/@types/循环'
+import { 循环技能详情, 循环详情, 循环数据 } from '@/@types/循环'
 import { 当前计算结果类型 } from '@/@types/输出'
 import { 技能基础数据模型 } from '@/@types/技能'
 import { 更新当前计算结果 } from '@/store/data'
 import { INT } from '@/工具函数/help'
 import { 判断团队增益轴快照计算 } from '@/数据/团队增益/tools'
+import 获取当前数据 from '@/数据/数据工具/获取当前数据'
 
 import { 获取计算目标信息 } from './统一工具函数/工具函数'
 import { 获取判断增益后技能系数 } from './统一工具函数/技能增益启用计算'
 import { 根据循环判断快照计算列表 } from './统一工具函数/增益计算函数'
 import 循环秒伤计算 from './循环秒伤计算'
+import 补齐装备特效等级 from '@/功能模块/基础设置/属性录入/配装器/工具函数/根据装备信息获取基础属性/补齐装备特效等级'
 
 interface CurrentDpsFunctionProps {
   是否更新显示计算结果?: boolean // 是否更新当前dps结果
@@ -65,13 +67,15 @@ export const 秒伤计算 =
     const currentState: RootState = getState?.() || {}
 
     const 网络延迟 = 更新网络延迟 ? 更新网络延迟 : (currentState?.data?.网络延迟 ?? 1)
-    const 当前装备信息 = { ...currentState?.data?.装备信息, ...更新装备信息 }
-    const 奇穴数据 = 更新奇穴数据?.length ? 更新奇穴数据 : currentState.data.当前奇穴信息
+    const 当前装备信息 = 补齐当前装备特效等级({
+      ...currentState?.data?.装备信息,
+      ...更新装备信息,
+    } as 装备信息数据类型)
 
     const 当前目标 = 获取计算目标信息(currentState?.data?.当前输出计算目标名称)
     const 增益启用 = 更新增益启用 === undefined ? currentState?.data?.增益启用 : 更新增益启用
     const 当前计算循环名称 = 更新计算循环名称 || currentState?.data?.当前计算循环名称
-    const 当前秘籍信息 = 更新秘籍信息 || currentState?.data?.当前秘籍信息
+    const 基础秘籍信息 = 更新秘籍信息 || currentState?.data?.当前秘籍信息
     const 增益数据 = { ...currentState?.data?.增益数据, ...更新增益数据 }
     const 自定义循环列表 = currentState?.data?.自定义循环列表 || []
     const 团队增益轴 = currentState?.data?.团队增益轴 || []
@@ -86,8 +90,20 @@ export const 秒伤计算 =
       },
       使用内存数据: false,
     })
+    const 奇穴数据 = 获取实际奇穴数据({
+      更新奇穴数据,
+      当前奇穴信息: currentState.data.当前奇穴信息,
+      当前计算循环名称,
+      当前循环信息,
+    })
 
     const 实际计算循环详情 = 更新计算循环详情 ? 更新计算循环详情 : 计算循环详情
+    const 默认秘籍信息 = 获取当前数据()?.默认数据?.秘籍 || {}
+    const 当前秘籍信息 = {
+      ...默认秘籍信息,
+      ...基础秘籍信息,
+      ...实际计算循环详情?.秘籍,
+    }
 
     const 当前循环技能列表 = 更新循环技能列表?.length
       ? 更新循环技能列表
@@ -137,10 +153,15 @@ export const 秒伤计算 =
       计算技能详情,
     })
 
-    // 每秒dps
-    const 秒伤 = 是否郭氏计算 ? INT(总伤 / 战斗时间) : 总伤 / 战斗时间
+    const 秒伤计算时间 = 实际计算循环详情?.秒伤计算时间 || 战斗时间
 
-    const 计算结果 = { 总伤, 秒伤, 秒伤计算时间: 战斗时间, 计算结果技能列表 }
+    // 每秒dps
+    const 秒伤 =
+      是否郭氏计算 && 实际计算循环详情?.伤害计算口径 !== 'Excel小数破防防御'
+        ? INT(总伤 / 秒伤计算时间)
+        : 总伤 / 秒伤计算时间
+
+    const 计算结果 = { 总伤, 秒伤, 秒伤计算时间, 计算结果技能列表 }
 
     if (是否更新显示计算结果) {
       dispatch?.(更新当前计算结果(计算结果))
@@ -156,4 +177,44 @@ export const 触发秒伤计算 = (props?: CurrentDpsFunctionProps) => (dispatch
   setTimeout(() => {
     dispatch?.(秒伤计算(props))
   }, 0)
+}
+
+const 补齐当前装备特效等级 = (装备信息: 装备信息数据类型) => {
+  if (!装备信息?.装备列表?.length) {
+    return 装备信息
+  }
+  return {
+    ...装备信息,
+    装备增益: 补齐装备特效等级(装备信息),
+  }
+}
+
+const 标准化循环名称 = (循环名称?: string) => {
+  return (循环名称 || '').replace(/叠峰意/g, '叠锋意')
+}
+
+const 获取实际奇穴数据 = ({
+  更新奇穴数据,
+  当前奇穴信息,
+  当前计算循环名称,
+  当前循环信息,
+}: {
+  更新奇穴数据?: string[]
+  当前奇穴信息?: string[]
+  当前计算循环名称?: string
+  当前循环信息?: 循环数据
+}) => {
+  if (更新奇穴数据?.length) {
+    return 更新奇穴数据
+  }
+
+  const 缓存循环名称 = 标准化循环名称(当前计算循环名称)
+  const 实际循环名称 = 标准化循环名称(当前循环信息?.名称)
+  const 循环已回退 = 缓存循环名称 && 实际循环名称 && 缓存循环名称 !== 实际循环名称
+
+  if (循环已回退 && 当前循环信息?.奇穴?.length) {
+    return 当前循环信息.奇穴
+  }
+
+  return 当前奇穴信息 || []
 }

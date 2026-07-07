@@ -4,6 +4,7 @@ import 获取当前数据 from '@/数据/数据工具/获取当前数据'
 import { useAppDispatch, useAppSelector } from '@/hooks'
 import { 团队增益类型枚举, 团队增益选项数据类型, 增益选项数据类型 } from '@/@types/团队增益'
 import { 秒伤计算 } from '@/计算模块/计算函数'
+import { 整数千分位转换 } from '@/工具函数/help'
 import 团队增益图标 from '../团队增益图标'
 import styles from './index.module.less'
 
@@ -78,7 +79,7 @@ function 团队增益轴设置弹窗({ open, onCancel }) {
         return {
           ...新增益数据,
           秒伤差值,
-          秒伤比例: ((秒伤差值 / 当前计算结果?.秒伤) * 100)?.toFixed(2),
+          秒伤比例: (秒伤差值 / 当前计算结果?.秒伤) * 100,
         }
       })
       ?.filter((增益) => {
@@ -167,8 +168,8 @@ function 团队增益轴设置弹窗({ open, onCancel }) {
                           item?.启用 ? 'dps-up-color' : 'dps-low-color'
                         }`}
                       >
-                        {item?.秒伤差值}
-                        <span>({item?.秒伤比例}%)</span>
+                        {整数千分位转换(item?.秒伤差值 || 0)}
+                        <span>({整数千分位转换(item?.秒伤比例 || 0)}%)</span>
                       </span>
                     </div>
                   </div>

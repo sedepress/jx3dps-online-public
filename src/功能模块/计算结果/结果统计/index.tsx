@@ -6,6 +6,7 @@ import 技能结果详情容器 from './技能结果详情容器'
 import { 获取技能统计数据 } from './util'
 import './index.css'
 import html2canvas from 'html2canvas'
+import { 整数千分位转换 } from '@/工具函数/help'
 
 function 结果统计({
   visible,
@@ -130,12 +131,8 @@ function 结果统计({
                           ) : null}
                         </div>
                         <div className={'dps-count'}>
-                          <span className='dps-count-1'>
-                            {Number.isInteger(item.技能数量)
-                              ? item.技能数量
-                              : item.技能数量.toFixed(2)}
-                          </span>
-                          <span className='dps-count-2'>{item.技能总输出.toFixed(2)}</span>
+                          <span className='dps-count-1'>{整数千分位转换(item.技能数量)}</span>
+                          <span className='dps-count-2'>{整数千分位转换(item.技能总输出)}</span>
                           <span className='dps-count-3'>
                             {((item?.会心几率 || 0) * 100).toFixed(2)}%
                           </span>

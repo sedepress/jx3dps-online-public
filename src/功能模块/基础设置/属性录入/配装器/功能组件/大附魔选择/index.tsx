@@ -5,6 +5,7 @@ import './index.css'
 import { useAppDispatch, useAppSelector } from '@/hooks'
 import 根据表单选项获取装备信息 from '../../工具函数/根据表单选项获取装备信息'
 import { 秒伤计算 } from '@/计算模块/计算函数'
+import { 整数千分位转换 } from '@/工具函数/help'
 
 interface 大附魔选择类型 {
   value?: number
@@ -116,7 +117,7 @@ const 大附魔选择: ForwardRefExoticComponent<大附魔选择类型> = forwar
                 className={`zhuangbei-diff ${upItem?.dpsUp > 0 ? 'dps-up-color' : 'dps-low-color'}`}
               >
                 {upItem?.dpsUp > 0 ? '+' : ''}
-                {upItem?.dpsUp}
+                {整数千分位转换(upItem?.dpsUp)}
               </span>
             ) : null}
           </Select.Option>

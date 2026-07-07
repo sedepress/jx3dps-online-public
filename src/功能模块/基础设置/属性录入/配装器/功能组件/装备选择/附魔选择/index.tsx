@@ -7,6 +7,7 @@ import 根据表单选项获取装备信息 from '../../../工具函数/根据�
 import './index.css'
 import classNames from 'classnames'
 import { 装备位置部位枚举 } from '@/@types/装备'
+import { 整数千分位转换 } from '@/工具函数/help'
 
 interface 附魔选择入参 extends SelectProps {
   list: 附魔数据类型[]
@@ -88,6 +89,10 @@ function 附魔选择(props: 附魔选择入参) {
   }
 
   const cls = classNames('fumo-select', { 'equip-diff-change': 是否更换附魔 })
+  const 展示秒伤差异 = (value: number | string) => {
+    const 数字值 = Number(value)
+    return Number.isFinite(数字值) ? 整数千分位转换(数字值) : value
+  }
 
   return (
     <Select
@@ -140,7 +145,7 @@ function 附魔选择(props: 附魔选择入参) {
                     }`}
                   >
                     {+upItem?.dpsUp > 0 ? '+' : ''}
-                    {对比显示百分比 ? `${upItem?.dpsPercent}%` : `${upItem?.dpsUp}`}
+                    {对比显示百分比 ? `${upItem?.dpsPercent}%` : `${展示秒伤差异(upItem?.dpsUp)}`}
                   </span>
                 ) : null}
                 <span className={`fumo-name-number fumo-name-${颜色枚举?.[颜色]?.样式}`}>

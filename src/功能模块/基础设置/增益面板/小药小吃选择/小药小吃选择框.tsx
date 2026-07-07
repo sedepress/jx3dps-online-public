@@ -2,6 +2,7 @@ import { 小药小吃数据类型 } from '@/@types/小药小吃'
 import { 属性简写枚举 } from '@/@types/枚举'
 import { useAppDispatch, useAppSelector } from '@/hooks'
 import { 秒伤计算 } from '@/计算模块/计算函数'
+import { 整数千分位转换 } from '@/工具函数/help'
 import { Select, SelectProps, Tooltip } from 'antd'
 import React, { useState } from 'react'
 
@@ -73,13 +74,14 @@ const 小药小吃选择框: React.FC<小药小吃选择框入参> = (props) => 
             dpsUp: 0,
           }
         )?.dpsUp
+        const 展示Dps收益 = Math.round(upDps)
 
         const 小吃详情 = (
           <div>
             {item?.增益集合?.map((a, index) => {
               return (
                 <p key={`${item?.小吃名称}${index}`}>
-                  {属性简写枚举?.[a?.属性]}：{a?.值}
+                  {属性简写枚举?.[a?.属性]}：{整数千分位转换(a?.值 || 0)}
                 </p>
               )
             })}
@@ -101,10 +103,10 @@ const 小药小吃选择框: React.FC<小药小吃选择框入参> = (props) => 
                   ) : null}
                 </div>
               </Tooltip>
-              {upDps !== 0 ? (
-                <span className={`${upDps > 0 ? 'dps-up-color' : 'dps-low-color'}`}>
-                  {upDps > 0 ? '+' : ''}
-                  {upDps}
+              {展示Dps收益 !== 0 ? (
+                <span className={`${展示Dps收益 > 0 ? 'dps-up-color' : 'dps-low-color'}`}>
+                  {展示Dps收益 > 0 ? '+' : ''}
+                  {整数千分位转换(展示Dps收益)}
                 </span>
               ) : null}
             </div>

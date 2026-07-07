@@ -75,6 +75,17 @@ export interface 技能基础数据模型 {
    */
   武器伤害系数?: number
   /**
+   * @name 技能专用武器伤害
+   * @description 双武器职业可用，用于覆盖人物面板武伤参与该技能计算
+   */
+  武器伤害_最小值?: number
+  武器伤害_最大值?: number
+  /**
+   * @name 技能专用武器伤害倍率
+   * @description 双武器职业可用，用于按人物面板武伤换算副武器武伤
+   */
+  武器伤害_倍率?: number
+  /**
    * @name 伤害计算次数
    * @description 计算原始伤害时计算几次（例如4层流血则计算4次伤害）
    * @default 1
@@ -192,6 +203,11 @@ export interface 技能增益列表类型 {
    * @name 增益名称
    */
   增益名称: string
+  /**
+   * @name 覆盖率字段
+   * @description 全局启用增益可通过循环详情.覆盖率按技能循环口径缩放
+   */
+  覆盖率字段?: string
   /**
    * @name 是否常驻面板
    * @description 只对“通用增益”生效

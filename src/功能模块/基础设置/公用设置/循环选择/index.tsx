@@ -21,7 +21,10 @@ function 循环选择(props) {
   const 当前计算循环名称 = useAppSelector((state) => state?.data?.当前计算循环名称)
   const 装备信息 = useAppSelector((state) => state?.data?.装备信息)
 
-  const { 全部循环 = [], 计算循环详情 } = useCycle()
+  const { 全部循环 = [], 当前循环信息, 计算循环详情 } = useCycle()
+  const 展示循环名称 = 全部循环.some((item) => item?.名称 === 当前计算循环名称)
+    ? 当前计算循环名称
+    : 当前循环信息?.名称
 
   const 切换循环前校验 = (val) => {
     const 目标循环数据 = 全部循环?.find((item) => item?.名称 === val)
@@ -106,7 +109,7 @@ function 循环选择(props) {
       <h1 className='common-label'>循环</h1>
       <div className='common-content'>
         <Select
-          value={当前计算循环名称}
+          value={展示循环名称 || 当前计算循环名称}
           className='cycle-select'
           onChange={(v) => {
             if (不提示循环) {
@@ -142,7 +145,7 @@ function 循环选择(props) {
 
             const 快照计算列表 = 根据循环判断快照计算列表(item?.循环详情?.[0]?.技能详情 || [])
             return (
-              <Select.Option value={item?.名称} key={item.名称} label={item.名称}>
+              <Select.Option value={item?.名称} key={item.名称} label={item.标题 || item.名称}>
                 <Popover
                   placement='right'
                   zIndex={2000}

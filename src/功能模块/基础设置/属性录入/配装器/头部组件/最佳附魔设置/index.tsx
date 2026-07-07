@@ -9,6 +9,7 @@ import { 秒伤计算 } from '@/计算模块/计算函数'
 import { 装备位置部位枚举 } from '@/@types/装备'
 import 获取当前数据 from '@/数据/数据工具/获取当前数据'
 import { 数据埋点 } from '@/工具函数/tools/log'
+import { 整数千分位转换 } from '@/工具函数/help'
 
 import 根据装备信息获取基础属性 from '../../工具函数/根据装备信息获取基础属性'
 import { 修改装备属性, 初始化所有组合 } from './util'
@@ -238,7 +239,7 @@ function 最佳附魔设置({ 一键替换附魔, 对比秒伤, 对比装备信�
         <div className={'max-fumo-wrap'}>
           <div className='max-fumo-content'>
             <h1 className={'max-fumo-title'}>替换前</h1>
-            <h1 className='max-fumo-dps'>{对比秒伤}</h1>
+            <h1 className='max-fumo-dps'>{整数千分位转换(对比秒伤)}</h1>
             <div>
               {(当前附魔信息?.当前附魔 || []).map((item, index) => {
                 return (
@@ -253,7 +254,7 @@ function 最佳附魔设置({ 一键替换附魔, 对比秒伤, 对比装备信�
           <div className='max-fumo-content'>
             <h1 className={'max-fumo-title'}>替换后</h1>
             <h1 className='max-fumo-dps dps-up-color'>
-              {最大Dps}
+              {整数千分位转换(最大Dps)}
               <RiseOutlined className='max-fumo-dps-icon' />
             </h1>
             <div>

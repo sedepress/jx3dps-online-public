@@ -3,6 +3,7 @@ import React from 'react'
 import { useAppSelector } from '@/hooks'
 import 识别装备对比 from './识别装备对比'
 import 无封助手 from './无封助手'
+import { 整数千分位转换 } from '@/工具函数/help'
 import './index.css'
 
 const 装备助手: React.FC<ModalProps> = (props) => {
@@ -33,7 +34,10 @@ const 装备助手: React.FC<ModalProps> = (props) => {
       {...props}
     >
       <Tabs className='equip-modal-tabs' items={items} destroyInactiveTabPane />
-      <Alert className='equip-modal-old-dps' message={`当前秒伤：${当前计算结果?.秒伤}`} />
+      <Alert
+        className='equip-modal-old-dps'
+        message={`当前秒伤：${整数千分位转换(当前计算结果?.秒伤)}`}
+      />
     </Modal>
   )
 }

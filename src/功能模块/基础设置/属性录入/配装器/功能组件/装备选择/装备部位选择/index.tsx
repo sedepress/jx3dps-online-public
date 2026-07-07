@@ -20,6 +20,7 @@ import {
 } from '@/@types/装备'
 import { 秒伤计算 } from '@/计算模块/计算函数'
 import { 属性类型 } from '@/@types/属性'
+import { 整数千分位转换 } from '@/工具函数/help'
 
 import 根据表单选项获取装备信息 from '../../../工具函数/根据表单选项获取装备信息'
 import { 获取最大精炼等级 } from '..'
@@ -285,6 +286,10 @@ function 装备部位选择(props: 装备部位选择入参, ref) {
   }))
 
   const cls = classNames('zhuangbei-select', { 'equip-diff-change': 是否更换装备 })
+  const 展示秒伤差异 = (value: number | string) => {
+    const 数字值 = Number(value)
+    return Number.isFinite(数字值) ? 整数千分位转换(数字值) : value
+  }
 
   return (
     <div id='Guide_4' className={styles.zhuangbeiSelectWrapper}>
@@ -383,7 +388,7 @@ function 装备部位选择(props: 装备部位选择入参, ref) {
                       {+upItem?.dpsUp > 0 ? '+' : ''}
                       {对比显示百分比 && upItem?.dpsPercent
                         ? `${upItem?.dpsPercent}%`
-                        : `${upItem?.dpsUp}`}
+                        : `${展示秒伤差异(upItem?.dpsUp)}`}
                     </span>
                   ) : null}
                   <span className={'zhuangbei-select-level'}>{item.装备品级}</span>

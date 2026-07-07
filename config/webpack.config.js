@@ -98,6 +98,7 @@ const xinfaNameMap = {
   周天功_悟: 'ztg',
   焚影圣诀: 'fysj',
   幽罗引: 'yly',
+  问水诀: 'wsj',
   太玄经_悟: 'w_txj',
 }
 
@@ -233,8 +234,7 @@ module.exports = function (webpackEnv) {
       path: paths.appBuild,
       // Add /* filename */ comments to generated require()s in the output.
       pathinfo: isEnvDevelopment,
-      libraryTarget: 'commonjs', // 将指定文件打包为 CommonJS
-      // libraryTarget: isEnvDevelopment ? undefined : 'commonjs', // 将指定文件打包为 CommonJS
+      ...(isEnvProduction && isGetDpsMoment ? { libraryTarget: 'commonjs' } : {}),
       // There will be one main bundle, and one file per asynchronous chunk.
       // In development, it does not produce real files.
       filename: (pathData) => {

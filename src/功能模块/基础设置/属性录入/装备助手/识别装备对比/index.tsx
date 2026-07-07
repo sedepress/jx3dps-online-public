@@ -22,6 +22,7 @@ import { 获取最大精炼等级 } from '@/功能模块/基础设置/属性录�
 import { 秒伤计算 } from '@/计算模块/计算函数'
 import { v4 as uuidV4 } from 'uuid'
 import { GLOBAL_CDN_PREFIX } from '@/工具函数/const'
+import { 整数千分位转换 } from '@/工具函数/help'
 import Map from './map.json'
 import './index.css'
 
@@ -208,7 +209,7 @@ const 识别装备对比: React.FC<ModalProps> = () => {
         }`}
       >
         {data > 0 ? `+` : ''}
-        {data == 0 || data === undefined ? '-' : data}
+        {data == 0 || data === undefined ? '-' : 整数千分位转换(data)}
       </div>
     )
   }

@@ -5,7 +5,6 @@ import FullLoading from './组件/FullLoading'
 import useQuery from './hooks/use-query'
 
 // 懒加载组件
-const 登录 = React.lazy(() => import('./页面/登录/index'))
 const 计算器 = React.lazy(() => import('./页面/计算器/index'))
 const Haste = React.lazy(() => import('./页面/加速计算/index'))
 
@@ -15,6 +14,8 @@ const checkLogin = () => {
   // 开源仓库不包含加密函数，请自行实现
   return true
 }
+
+const 默认心法简写 = 'wsj'
 
 // 路由守卫组件
 const ProtectedRoute = ({ children }: { children: JSX.Element }) => {
@@ -42,6 +43,17 @@ const ProtectedRoute = ({ children }: { children: JSX.Element }) => {
   return checkLogin() ? children : <Navigate to='/' replace />
 }
 
+const 首页重定向 = () => {
+  const urlCode = useQuery('code')
+  const query = [`xf=${默认心法简写}`]
+
+  if (urlCode) {
+    query.push(`code=${urlCode}`)
+  }
+
+  return <Navigate to={`/dps?${query.join('&')}`} replace />
+}
+
 const root = ReactDOM.createRoot(document.getElementById('root') as any)
 
 const isLocalBuild = process.env.REACT_APP_BUILD_TYPE === 'local'
@@ -52,14 +64,7 @@ if (isLocalBuild) {
   root.render(
     <BrowserRouter>
       <Routes>
-        <Route
-          path='/'
-          element={
-            <Suspense fallback={<FullLoading />}>
-              <登录 />
-            </Suspense>
-          }
-        />
+        <Route path='/' element={<首页重定向 />} />
         <Route
           path='/dps'
           element={

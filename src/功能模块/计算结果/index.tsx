@@ -5,6 +5,7 @@ import 获取当前数据 from '@/数据/数据工具/获取当前数据'
 import { 计算记录类型 } from '@/@types/计算'
 import { 数据埋点 } from '@/工具函数/tools/log'
 import { 秒伤计算 } from '@/计算模块/计算函数'
+import { 整数千分位转换 } from '@/工具函数/help'
 
 import 结果统计 from './结果统计'
 import 收益图表 from './收益图表'
@@ -90,7 +91,7 @@ function 计算结果() {
         {当前计算结果?.秒伤 ? (
           <div className={'dps-number-count'}>
             <div id='Guide_8' className={'dps-number-count-text'}>
-              {当前计算结果?.秒伤}
+              {整数千分位转换(当前计算结果?.秒伤)}
             </div>
             <Button
               className={'dps-number-count-skill-btn'}
@@ -113,7 +114,7 @@ function 计算结果() {
         {当前计算结果?.秒伤 ? (
           <div className='dps-number-count-time'>
             <span className={'dps-number-count-time-label'}>战斗时间：</span>
-            {当前计算结果?.秒伤计算时间}秒
+            {整数千分位转换(当前计算结果?.秒伤计算时间)}秒
           </div>
         ) : null}
       </div>

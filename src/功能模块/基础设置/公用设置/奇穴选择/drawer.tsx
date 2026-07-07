@@ -11,6 +11,20 @@ const { 奇穴数据 = [] } = 获取当前数据()
 
 const 兜底图片 = 'https://icon.jx3box.com/icon/13.png'
 
+const 查找奇穴分组索引 = (奇穴名称?: string) => {
+  return 奇穴数据.findIndex((分组) => 分组?.奇穴列表?.some((奇穴) => 奇穴?.奇穴名称 === 奇穴名称))
+}
+
+const 获取普通奇穴字段初始值 = () => {
+  const 默认值 = {}
+  奇穴数据.forEach((分组, index) => {
+    if (!分组?.是否为混池) {
+      默认值[index] = undefined
+    }
+  })
+  return 默认值
+}
+
 const 奇穴选择抽屉: React.FC<any> = (props?: any) => {
   const { value, onChange, open, onClose, ...rest } = props || {}
   const [form] = Form.useForm()
@@ -21,17 +35,12 @@ const 奇穴选择抽屉: React.FC<any> = (props?: any) => {
   const handleChangeQixue = (_, values) => {
     const 特殊奇穴索引 = 奇穴数据.findIndex((item) => item.是否为特殊奇穴)
 
-    const newArray = Object.keys(values)
-      ?.filter((key, index) => {
-        // 排除 'mix' 和特殊奇穴的索引
-        if (key === 'mix') return false
-        if (特殊奇穴索引 !== -1 && +key === 特殊奇穴索引) return false
-        // 只保留常规奇穴（索引 0-5）
-        return +key < 6
-      })
-      .map((key) => {
-        return values[key]
-      })
+    const newArray = 奇穴数据.flatMap((分组, index) => {
+      if (分组?.是否为混池 || (特殊奇穴索引 !== -1 && index === 特殊奇穴索引)) {
+        return []
+      }
+      return values?.[index] ? [values[index]] : []
+    })
 
     if (values?.mix) {
       newArray.push(...(values?.mix || []))
@@ -65,18 +74,22 @@ const 奇穴选择抽屉: React.FC<any> = (props?: any) => {
   useEffect(() => {
     const 特殊奇穴索引 = 奇穴数据.findIndex((item) => item.是否为特殊奇穴)
 
-    const obj = {}
+    const obj = 获取普通奇穴字段初始值()
     const misList: string[] = []
-    当前奇穴信息?.forEach((item, index) => {
-      if (index >= 6 && index < 10) {
-        // 混池奇穴 (索引6-9)
+    当前奇穴信息?.forEach((item) => {
+      const 奇穴分组索引 = 查找奇穴分组索引(item)
+      const 奇穴分组 = 奇穴数据?.[奇穴分组索引]
+
+      if (!奇穴分组) {
+        return
+      }
+
+      if (奇穴分组?.是否为混池) {
         misList.push(item)
-      } else if (特殊奇穴索引 !== -1 && index === 10) {
-        // 特殊奇穴（索引8，但实际在数组中的位置）
+      } else if (特殊奇穴索引 !== -1 && 奇穴分组索引 === 特殊奇穴索引) {
         obj[特殊奇穴索引] = item
       } else {
-        // 常规奇穴 (索引0-5)
-        obj[index] = item || undefined
+        obj[奇穴分组索引] = item || undefined
       }
     })
     form?.setFieldsValue({

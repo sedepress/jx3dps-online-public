@@ -218,6 +218,14 @@ export function 千分位转换(value: number | string): string {
   return result
 }
 
+export function 整数千分位转换(value: number | string): string {
+  const 数字值 = Number(value)
+  if (!Number.isFinite(数字值)) {
+    return '0'
+  }
+  return 千分位转换(Math.round(数字值))
+}
+
 export function 数组求和(数字数组: number[]): number {
   let 总和 = 0
   for (let i = 0; i < 数字数组.length; i++) {

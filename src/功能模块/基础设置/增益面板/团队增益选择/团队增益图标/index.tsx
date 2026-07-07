@@ -4,6 +4,7 @@ import { 团队增益数据类型, 团队增益选项数据类型 } from '@/@typ
 import './index.css'
 import { useAppSelector } from '@/hooks'
 import classNames from 'classnames'
+import { 整数千分位转换 } from '@/工具函数/help'
 
 interface 团队增益图标类型 {
   data: 团队增益数据类型
@@ -43,13 +44,13 @@ function 团队增益图标(props: 团队增益图标类型) {
           {当前数据?.覆盖率 && 当前数据?.覆盖率 !== 100 ? (
             <>
               <h1 className={'tuandui-zengyi-img-title'}>覆盖率</h1>
-              <p className={'tuandui-zengyi-img-text'}>{当前数据?.覆盖率}%</p>
+              <p className={'tuandui-zengyi-img-text'}>{整数千分位转换(当前数据?.覆盖率 || 0)}%</p>
             </>
           ) : null}
           {当前数据?.层数 && 当前数据?.层数 > 1 ? (
             <>
               <h1 className={'tuandui-zengyi-img-title'}>层数</h1>
-              <p className={'tuandui-zengyi-img-text'}>{当前数据?.层数}层</p>
+              <p className={'tuandui-zengyi-img-text'}>{整数千分位转换(当前数据?.层数 || 0)}层</p>
             </>
           ) : null}
           {轴数据启用 ? (
