@@ -55,7 +55,10 @@ export interface 技能类实例集合 {
   千枝绽蕊?: any
   千枝伏藏?: any
   唤醒?: any
+  易命?: any
   损毁?: any
+  // 磁雷外泄?: any
+  万灵丹?: any
   通用内力回复?: any
 }
 

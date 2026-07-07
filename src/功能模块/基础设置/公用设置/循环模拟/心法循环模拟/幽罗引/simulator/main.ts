@@ -44,7 +44,6 @@ import 夹线 from './技能类/夹线'
 import 触发橙武 from './技能类/触发橙武'
 
 import 夹线DOT from './DOT类/夹线DOT'
-import 拘意DOT from './DOT类/拘意'
 import 千里急DOT from './DOT类/千里急'
 
 import { 起手Buff配置 } from '../../通用/通用框架/类型定义/Buff'
@@ -69,6 +68,8 @@ export interface SimulatorCycleProps {
   启用团队增益快照?: boolean
   团队增益轴?: 团队增益轴类型
   起手Buff配置?: 起手Buff配置
+  忽略延迟技能?: string[]
+  周期性忽略延迟?: number
 }
 
 class 循环主类 {
@@ -108,6 +109,8 @@ class 循环主类 {
   显示龙牙龙驭层数 = false
   团队增益轴: 团队增益轴类型 = {}
   启用血量消耗计算 = false
+  忽略延迟技能: string[] = []
+  周期性忽略延迟 = 0
 
   // 初始化创建
   constructor(props: SimulatorCycleProps) {
@@ -124,6 +127,8 @@ class 循环主类 {
     this.网络延迟 = props.网络延迟
     this.启用团队增益快照 = !!props.启用团队增益快照
     this.团队增益轴 = props.团队增益轴 ? props.团队增益轴 : {}
+    this.忽略延迟技能 = props?.忽略延迟技能 || []
+    this.周期性忽略延迟 = props.周期性忽略延迟 || 0
     // 根据奇穴和装备情况修改buff的数据
     this.Buff和Dot数据 = 根据奇穴修改buff数据(this.奇穴)
     // 根据奇穴和装备情况修改技能的数据
@@ -163,7 +168,6 @@ class 循环主类 {
       心络: new 心络(this),
       换行: new 换行(this),
       夹线: new 夹线(this),
-      拘意DOT: new 拘意DOT(this),
       千里急DOT: new 千里急DOT(this),
       夹线DOT: new 夹线DOT(this),
     }
@@ -536,7 +540,12 @@ class 循环主类 {
     }
 
     const 是否是倒读条技能 = 当前技能?.是否为倒读条技能
-    const 延迟等待 = this.当前时间 !== undefined && !是否是倒读条技能 && GCD ? this.网络延迟 : 0
+    let 延迟等待 = this.当前时间 !== undefined && !是否是倒读条技能 && GCD ? this.网络延迟 : 0
+    if (this.周期性忽略延迟 <= 0 && this?.忽略延迟技能?.includes(当前技能?.技能名称)) {
+      延迟等待 = 0
+    } else if (this.周期性忽略延迟 > 0 && i % (this.周期性忽略延迟 + 1) < 1) {
+      延迟等待 = 0
+    }
     const 技能计划释放时间 = this.当前时间 + GCD + 延迟等待
 
     return {
@@ -644,7 +653,6 @@ class 循环主类 {
   // 对当前的DOT进行已过期的结算和剩余时间更新
   DOT结算与更新() {
     // this.技能类实例集合?.流血?.结算流血伤害()
-    this.技能类实例集合?.拘意DOT?.结算拘意伤害()
     this.技能类实例集合?.千里急DOT?.结算千里急伤害()
     this.技能类实例集合?.夹线DOT?.结算夹线DOT伤害()
   }
