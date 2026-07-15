@@ -1,6 +1,8 @@
 import { Excel基线动作 } from '../rules/constants'
-import { 问水模拟状态 } from '../types'
+import { 问水动作上下文, 问水模拟状态 } from '../types'
 import { 执行动作 } from './engine'
+
+const 空上下文: 问水动作上下文 = {}
 
 interface Excel基线执行结果 {
   成功: boolean
@@ -20,6 +22,7 @@ const 获取玩家动作 = (token: string) => {
 export const 执行Excel基线 = (
   state: 问水模拟状态,
   baseline: Excel基线动作[],
+  context: 问水动作上下文 = 空上下文,
 ): Excel基线执行结果 => {
   let current = state
   for (let index = 0; index < baseline.length; index += 1) {
@@ -33,7 +36,7 @@ export const 执行Excel基线 = (
         失败原因: `${source.来源列}${source.来源行} ${source.技能}: 未知 Excel 基线 token`,
       }
     }
-    const result = 执行动作(current, action)
+    const result = 执行动作(current, action, context)
     if (!result.成功) {
       return {
         成功: false,
