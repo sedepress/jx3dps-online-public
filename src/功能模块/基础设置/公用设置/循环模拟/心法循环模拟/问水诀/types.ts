@@ -59,6 +59,12 @@ export interface 创建问水状态参数 {
   网络延迟: number
 }
 
+export interface 问水动作上下文 {
+  奇穴?: string[]
+  秘籍?: Record<string, string[]>
+  触发玉山揽云?: boolean
+}
+
 export interface 问水动作结果 {
   成功: boolean
   状态: 问水模拟状态
