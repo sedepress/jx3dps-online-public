@@ -1,3 +1,4 @@
+import { describe, expect, it } from '@jest/globals'
 import { 获取Excel基线, 每秒郭氏帧 } from './constants'
 
 describe('问水诀最优序列规则来源', () => {
