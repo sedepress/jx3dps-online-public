@@ -18,6 +18,8 @@ interface 创建伤害事件参数 {
   额外增益签名?: string[]
 }
 
+const 团队增益事件起始序号 = -1_000_000
+
 const 获取释放帧 = (轴: 团队增益轴数据类型, 结束帧: number) => {
   const 显式时间点 = Array.from(new Set(轴.释放时间点 || []))
     .filter((frame) => frame >= 0 && frame <= 结束帧)
@@ -76,7 +78,9 @@ const 创建窗口事件 = (窗口: 团队增益窗口, 序号: number): 问水�
 
 export const 构建团队增益轴事件 = (团队增益轴: 团队增益轴类型, 结束帧: number) => {
   const 窗口 = Object.entries(团队增益轴).flatMap(([名称, 轴]) => 创建增益窗口(名称, 轴, 结束帧))
-  return 窗口.flatMap((item, index) => 创建窗口事件(item, index * 2)).sort(比较问水事件)
+  return 窗口
+    .flatMap((item, index) => 创建窗口事件(item, 团队增益事件起始序号 + index * 2))
+    .sort(比较问水事件)
 }
 
 export const 添加团队增益轴事件 = (state: 问水模拟状态, 团队增益轴: 团队增益轴类型) => ({
@@ -92,9 +96,10 @@ export const 创建带增益签名的伤害事件 = (
   state: 问水模拟状态,
   参数: 创建伤害事件参数,
 ): 问水待生效事件 => {
-  const 增益签名 = Array.from(
-    new Set(获取当前团队增益签名(state).concat(参数.额外增益签名 || [])),
-  ).sort()
+  const 静态增益签名 = 参数.额外增益签名 || []
+  const 增益签名 = 参数.是否快照
+    ? Array.from(new Set(获取当前团队增益签名(state).concat(静态增益签名))).sort()
+    : Array.from(new Set(静态增益签名)).sort()
   return {
     事件类型: '伤害',
     生效帧: 参数.命中帧,
@@ -102,6 +107,7 @@ export const 创建带增益签名的伤害事件 = (
     技能名称: 参数.技能名称,
     增益签名,
     快照签名: 参数.是否快照 ? 增益签名 : undefined,
+    命中时读取增益: !参数.是否快照,
     事件数据: { 伤害次数: 参数.伤害次数 ?? 1, 技能等级: 参数.技能等级 ?? 0 },
   }
 }

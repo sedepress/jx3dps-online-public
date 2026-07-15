@@ -14,6 +14,7 @@ export interface 问水待生效事件 {
   技能名称?: string
   增益签名?: string[]
   快照签名?: string[]
+  命中时读取增益?: boolean
   事件数据?: Record<string, number | string | boolean>
 }
 
