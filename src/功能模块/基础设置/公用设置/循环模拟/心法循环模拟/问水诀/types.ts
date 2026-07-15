@@ -12,6 +12,8 @@ export interface 问水待生效事件 {
   生效帧: number
   序号: number
   技能名称?: string
+  增益签名?: string[]
+  快照签名?: string[]
   事件数据?: Record<string, number | string | boolean>
 }
 
@@ -43,6 +45,7 @@ export interface 问水模拟状态 {
   断潮可用: boolean
   自身Buff: Record<string, 问水Buff状态>
   目标Buff: Record<string, 问水Buff状态>
+  团队增益: Record<string, 问水Buff状态>
   技能CD: Record<string, number>
   GCD: { 公共: number; 自身: Record<string, number> }
   待生效事件: 问水待生效事件[]

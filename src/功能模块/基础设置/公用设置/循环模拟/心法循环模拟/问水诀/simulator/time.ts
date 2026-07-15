@@ -13,7 +13,9 @@ const 获取Buff结束帧 = (Buff集合: Record<string, 问水Buff状态>) =>
 
 const 获取中间帧 = (state: 问水模拟状态, targetFrame: number) => {
   const 事件帧 = state.待生效事件.map((事件) => 事件.生效帧)
-  const Buff帧 = 获取Buff结束帧(state.自身Buff).concat(获取Buff结束帧(state.目标Buff))
+  const Buff帧 = 获取Buff结束帧(state.自身Buff)
+    .concat(获取Buff结束帧(state.目标Buff))
+    .concat(获取Buff结束帧(state.团队增益))
   return Array.from(new Set(事件帧.concat(Buff帧)))
     .filter((frame) => frame > state.当前帧 && frame < targetFrame)
     .sort((a, b) => a - b)
@@ -32,6 +34,7 @@ export const 清理过期Buff = (state: 问水模拟状态, frame: number): 问�
   ...state,
   自身Buff: 清理Buff集合(state.自身Buff, frame),
   目标Buff: 清理Buff集合(state.目标Buff, frame),
+  团队增益: 清理Buff集合(state.团队增益, frame),
 })
 
 const 执行空动作帧 = (state: 问水模拟状态, frame: number) =>
