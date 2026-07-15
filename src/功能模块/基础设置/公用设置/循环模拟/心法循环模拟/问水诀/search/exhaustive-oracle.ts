@@ -58,10 +58,18 @@ interface 执行策略动作参数 {
 interface 扩展问水搜索候选参数 {
   稳定序号: number
   最多尝试: number
+  起始动作索引?: number
 }
 
 type 问水候选扩展结果 =
-  | { 成功: true; 候选: 问水搜索候选[]; 下一稳定序号: number; 消耗扩展数: number }
+  | {
+      成功: true
+      候选: 问水搜索候选[]
+      下一稳定序号: number
+      消耗扩展数: number
+      下一动作索引: number
+      是否完成: boolean
+    }
   | { 成功: false; 失败原因: string }
 
 const 创建初始分支 = (state: 问水模拟状态): 问水概率分支 => ({
@@ -183,8 +191,11 @@ export const 扩展问水搜索候选 = (
   let order = 参数.稳定序号
   let attempts = 0
   const candidates: 问水搜索候选[] = []
-  for (const action of 获取策略动作(config)) {
+  const actions = 获取策略动作(config)
+  let index = 参数.起始动作索引 || 0
+  for (; index < actions.length; index += 1) {
     if (attempts >= 参数.最多尝试) break
+    const action = actions[index]
     const result = 执行策略动作(candidate, action, { config, 稳定序号: order })
     order += 1
     attempts += 1
@@ -192,7 +203,14 @@ export const 扩展问水搜索候选 = (
     if (!result.成功) return result
     candidates.push(result.候选)
   }
-  return { 成功: true, 候选: candidates, 下一稳定序号: order, 消耗扩展数: attempts }
+  return {
+    成功: true,
+    候选: candidates,
+    下一稳定序号: order,
+    消耗扩展数: attempts,
+    下一动作索引: index,
+    是否完成: index >= actions.length,
+  }
 }
 
 export const 评估问水策略步骤 = (config: 问水搜索配置, steps: 问水策略动作[]): 问水候选结果 => {

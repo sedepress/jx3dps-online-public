@@ -8,13 +8,13 @@ import {
   问水搜索配置,
 } from './exhaustive-oracle'
 
-interface 搜索问水Beam策略参数 extends 问水搜索配置 {
+export interface 搜索问水Beam策略参数 extends 问水搜索配置 {
   Beam宽度: number
   扩展预算: number
   基线动作序列?: string[]
 }
 
-type 问水Beam搜索结果 =
+export type 问水Beam搜索结果 =
   | {
       成功: true
       最佳候选: 问水搜索候选
@@ -26,6 +26,9 @@ type 问水Beam搜索结果 =
 
 interface Beam运行状态 {
   frontier: 问水搜索候选[]
+  frontierIndex: number
+  actionIndex: number
+  next: 问水搜索候选[]
   best: 问水搜索候选
   expanded: number
   stableOrder: number
@@ -33,9 +36,12 @@ interface Beam运行状态 {
   failureReason?: string
 }
 
-interface Beam控制参数 {
-  width: number
-  budget: number
+export interface 问水Beam会话 {
+  config: 问水搜索配置
+  Beam宽度: number
+  扩展预算: number
+  runtime: Beam运行状态
+  基线失败原因?: string
 }
 
 const 获取分支分组键 = (candidate: 问水搜索候选) =>
@@ -96,67 +102,121 @@ const 校验Beam参数 = (width: number, budget: number) => {
   return undefined
 }
 
-const 执行Beam轮次 = (
-  runtime: Beam运行状态,
-  config: 问水搜索配置,
-  control: Beam控制参数,
-): Beam运行状态 => {
-  const next: 问水搜索候选[] = []
-  let { best, expanded, stableOrder } = runtime
+const 接收Beam子节点 = (runtime: Beam运行状态, children: 问水搜索候选[]) => {
+  let { best } = runtime
+  const next = runtime.next.slice()
   const bestByState = new Map(runtime.bestByState)
-  outer: for (const candidate of runtime.frontier) {
-    const children = 扩展问水搜索候选(candidate, config, {
-      稳定序号: stableOrder,
-      最多尝试: control.budget - expanded,
-    })
-    if (!children.成功) return { ...runtime, failureReason: children.失败原因 }
-    stableOrder = children.下一稳定序号
-    expanded += children.消耗扩展数
-    for (const child of children.候选) {
-      if (比较问水搜索候选(child, best) < 0) best = child
-      const key = 获取问水策略状态键(child.分支)
-      const previous = bestByState.get(key)
-      if (previous && 比较问水搜索候选(child, previous) >= 0) continue
-      bestByState.set(key, child)
-      if (child.乐观上界 >= best.期望总伤) next.push(child)
-    }
-    if (expanded >= control.budget) break outer
+  for (const child of children) {
+    if (比较问水搜索候选(child, best) < 0) best = child
+    const key = 获取问水策略状态键(child.分支)
+    const previous = bestByState.get(key)
+    if (previous && 比较问水搜索候选(child, previous) >= 0) continue
+    bestByState.set(key, child)
+    if (child.乐观上界 >= best.期望总伤) next.push(child)
   }
-  return {
-    frontier: 选择分组Beam(按状态去重(next), control.width),
-    best,
-    expanded,
-    stableOrder,
-    bestByState,
-  }
+  return { best, next, bestByState }
 }
 
-export const 搜索问水Beam策略 = ({
+const 完成Beam层 = (runtime: Beam运行状态, width: number): Beam运行状态 => ({
+  ...runtime,
+  frontier: 选择分组Beam(按状态去重(runtime.next), width),
+  frontierIndex: 0,
+  actionIndex: 0,
+  next: [],
+})
+
+const 推进Beam到预算 = (session: 问水Beam会话, targetBudget: number): 问水Beam会话 => {
+  let runtime = session.runtime
+  while (runtime.frontier.length && runtime.expanded < targetBudget) {
+    const candidate = runtime.frontier[runtime.frontierIndex]
+    const expanded = 扩展问水搜索候选(candidate, session.config, {
+      稳定序号: runtime.stableOrder,
+      最多尝试: targetBudget - runtime.expanded,
+      起始动作索引: runtime.actionIndex,
+    })
+    if (!expanded.成功)
+      return { ...session, runtime: { ...runtime, failureReason: expanded.失败原因 } }
+    const accepted = 接收Beam子节点(runtime, expanded.候选)
+    runtime = {
+      ...runtime,
+      ...accepted,
+      expanded: runtime.expanded + expanded.消耗扩展数,
+      stableOrder: expanded.下一稳定序号,
+      actionIndex: expanded.下一动作索引,
+    }
+    if (expanded.是否完成) {
+      runtime = { ...runtime, frontierIndex: runtime.frontierIndex + 1, actionIndex: 0 }
+    }
+    if (runtime.frontierIndex >= runtime.frontier.length)
+      runtime = 完成Beam层(runtime, session.Beam宽度)
+  }
+  return { ...session, runtime }
+}
+
+export const 创建问水Beam会话 = ({
   Beam宽度,
   扩展预算,
   ...config
-}: 搜索问水Beam策略参数): 问水Beam搜索结果 => {
+}: 搜索问水Beam策略参数):
+  | { 成功: true; 会话: 问水Beam会话 }
+  | { 成功: false; 失败原因: string } => {
   const validationError = 校验Beam参数(Beam宽度, 扩展预算)
   if (validationError) return { 成功: false, 失败原因: validationError }
   const initial = 创建问水搜索起点(config)
   if (!initial.成功) return initial
   const seeded = 获取初始最佳({ ...config, Beam宽度, 扩展预算 }, initial.候选)
-  let runtime: Beam运行状态 = {
-    frontier: [initial.候选],
-    best: seeded.候选,
-    expanded: 0,
-    stableOrder: 1,
-    bestByState: new Map([[获取问水策略状态键(initial.候选.分支), initial.候选]]),
-  }
-  while (runtime.frontier.length && runtime.expanded < 扩展预算) {
-    runtime = 执行Beam轮次(runtime, config, { width: Beam宽度, budget: 扩展预算 })
-    if (runtime.failureReason) return { 成功: false, 失败原因: runtime.failureReason }
-  }
   return {
     成功: true,
-    最佳候选: runtime.best,
-    扩展节点数: runtime.expanded,
-    结束原因: runtime.frontier.length ? '扩展预算' : '空间收敛',
-    ...(seeded.失败原因 ? { 基线失败原因: seeded.失败原因 } : {}),
+    会话: {
+      config,
+      Beam宽度,
+      扩展预算,
+      runtime: {
+        frontier: [initial.候选],
+        frontierIndex: 0,
+        actionIndex: 0,
+        next: [],
+        best: seeded.候选,
+        expanded: 0,
+        stableOrder: 1,
+        bestByState: new Map([[获取问水策略状态键(initial.候选.分支), initial.候选]]),
+      },
+      ...(seeded.失败原因 ? { 基线失败原因: seeded.失败原因 } : {}),
+    },
+  }
+}
+
+export const 推进问水Beam会话 = (session: 问水Beam会话, chunkBudget: number) => {
+  if (!Number.isInteger(chunkBudget) || chunkBudget < 1) {
+    return { 成功: false as const, 失败原因: 'chunk扩展数必须为正整数' }
+  }
+  const target = Math.min(session.扩展预算, session.runtime.expanded + chunkBudget)
+  const next = 推进Beam到预算(session, target)
+  if (next.runtime.failureReason)
+    return { 成功: false as const, 失败原因: next.runtime.failureReason }
+  return { 成功: true as const, 会话: next }
+}
+
+export const 获取问水Beam会话结果 = (session: 问水Beam会话) => ({
+  最佳候选: session.runtime.best,
+  扩展节点数: session.runtime.expanded,
+  结束原因: session.runtime.frontier.length
+    ? session.runtime.expanded >= session.扩展预算
+      ? ('扩展预算' as const)
+      : ('进行中' as const)
+    : ('空间收敛' as const),
+  ...(session.基线失败原因 ? { 基线失败原因: session.基线失败原因 } : {}),
+})
+
+export const 搜索问水Beam策略 = (params: 搜索问水Beam策略参数): 问水Beam搜索结果 => {
+  const created = 创建问水Beam会话(params)
+  if (!created.成功) return created
+  const advanced = 推进问水Beam会话(created.会话, params.扩展预算)
+  if (!advanced.成功) return advanced
+  const result = 获取问水Beam会话结果(advanced.会话)
+  return {
+    成功: true,
+    ...result,
+    结束原因: result.结束原因 === '进行中' ? '扩展预算' : result.结束原因,
   }
 }
