@@ -144,10 +144,13 @@ export const 执行断潮条件规则 = (
   return 执行动作(state, action, context)
 }
 
-export const 合并可观察分支 = (branches: 问水概率分支[]): 问水概率分支[] => {
+export const 合并可观察分支 = (
+  branches: 问水概率分支[],
+  getStateKey: (state: 问水模拟状态) => string = 获取可观察状态键,
+): 问水概率分支[] => {
   const grouped = new Map<string, 问水概率分支>()
   branches.forEach((branch) => {
-    const key = 获取可观察状态键(branch.状态)
+    const key = getStateKey(branch.状态)
     const current = grouped.get(key)
     if (!current) {
       grouped.set(key, {
