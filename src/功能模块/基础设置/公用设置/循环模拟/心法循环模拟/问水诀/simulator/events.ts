@@ -1,0 +1,39 @@
+import { 问水待生效事件, 问水模拟状态 } from '../types'
+
+const 获取事件数字 = (事件: 问水待生效事件, key: string, 默认值 = 0) => {
+  const value = 事件.事件数据?.[key]
+  return typeof value === 'number' ? value : 默认值
+}
+
+const 结算伤害事件 = (state: 问水模拟状态, 事件: 问水待生效事件): 问水模拟状态 => {
+  if (!事件.技能名称 || 事件.生效帧 > state.结束帧) {
+    return state
+  }
+  return {
+    ...state,
+    伤害事件: state.伤害事件.concat({
+      技能名称: 事件.技能名称,
+      命中帧: 事件.生效帧,
+      伤害次数: 获取事件数字(事件, '伤害次数', 1),
+      技能等级: 获取事件数字(事件, '技能等级') || undefined,
+    }),
+  }
+}
+
+const 结算资源事件 = (state: 问水模拟状态, 事件: 问水待生效事件): 问水模拟状态 => ({
+  ...state,
+  剑气: state.剑气 + 获取事件数字(事件, '剑气变化'),
+})
+
+export const 比较问水事件 = (左: 问水待生效事件, 右: 问水待生效事件) =>
+  左.生效帧 - 右.生效帧 || 左.序号 - 右.序号
+
+export const 结算问水事件 = (state: 问水模拟状态, 事件: 问水待生效事件) => {
+  if (事件.事件类型 === '伤害') {
+    return 结算伤害事件(state, 事件)
+  }
+  if (事件.事件类型 === '资源') {
+    return 结算资源事件(state, 事件)
+  }
+  return state
+}
