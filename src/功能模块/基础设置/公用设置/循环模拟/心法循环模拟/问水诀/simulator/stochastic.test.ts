@@ -1,6 +1,23 @@
 import { describe, expect, it } from '@jest/globals'
 import { 创建问水起手状态 } from './create-state'
-import { 执行断潮条件规则, 合并可观察分支, 处理断潮触发, 选择断潮条件动作 } from './stochastic'
+import {
+  执行断潮条件规则,
+  合并可观察分支,
+  处理断潮触发,
+  选择断潮条件动作,
+  问水概率分支,
+} from './stochastic'
+
+interface 压缩测试项 {
+  技能名称: string
+  技能等级: number | null
+  增益签名: string[]
+  快照签名: string[]
+  施放数量: number
+  伤害次数: number
+}
+
+type 压缩测试分支 = 问水概率分支 & { 压缩伤害: Record<string, 压缩测试项> }
 
 describe('问水诀随机分支', () => {
   it('会心触发将状态拆成断潮可用与不可用且总概率为 1', () => {
@@ -186,6 +203,42 @@ describe('问水诀随机分支', () => {
       expect(branch.历史分支?.reduce((sum, history) => sum + history.概率, 0)).toBeCloseTo(
         branch.概率,
       )
+    })
+  })
+
+  it('压缩伤害在拆分时按子父概率缩放并在合并时守恒', () => {
+    const state = 创建问水起手状态({ 战斗秒数: 30, 加速值: 0, 网络延迟: 0 })
+    const compact = {
+      状态: state,
+      概率: 0.8,
+      期望伤害: 0,
+      压缩伤害: {
+        断潮: {
+          技能名称: '断潮',
+          技能等级: null,
+          增益签名: [],
+          快照签名: [],
+          施放数量: 0.8,
+          伤害次数: 1.6,
+        },
+      },
+    } as unknown as 压缩测试分支
+
+    const children = 处理断潮触发(compact, 0.25)
+
+    expect(children.map((branch) => branch.概率)).toEqual([0.2, 0.6000000000000001])
+    const weightedCounts = children.map(
+      (branch) => (branch as 压缩测试分支).压缩伤害?.断潮.施放数量,
+    )
+    expect(weightedCounts[0]).toBeCloseTo(0.2)
+    expect(weightedCounts[1]).toBeCloseTo(0.6)
+    const merged = 合并可观察分支(
+      children.map((branch) => ({ ...branch, 状态: { ...branch.状态, 断潮可用: false } })),
+    )
+    expect(merged).toHaveLength(1)
+    expect(Object.values((merged[0] as 压缩测试分支).压缩伤害)[0]).toMatchObject({
+      施放数量: 0.8,
+      伤害次数: 1.6,
     })
   })
 })

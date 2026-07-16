@@ -2,6 +2,7 @@ import { 聚合问水策略 } from '../damage/aggregate-policy'
 import { 计算问水聚合期望伤害, 问水伤害表项 } from '../damage/build-damage-table'
 import { 执行动作 } from '../simulator/engine'
 import {
+  压缩已结算伤害,
   合并可观察分支,
   处理断潮触发,
   选择断潮条件动作,
@@ -77,6 +78,7 @@ const 创建初始分支 = (state: 问水模拟状态): 问水概率分支 => ({
   状态: state,
   概率: 1,
   期望伤害: 0,
+  压缩伤害: {},
 })
 
 const 计算策略伤害 = (branches: 问水概率分支[], table: 问水伤害表项[]) => {
@@ -119,7 +121,7 @@ const 获取技能会心率 = (config: 问水搜索配置, skill: string) =>
 const 执行主技能 = (branch: 问水概率分支, skill: string, config: 问水搜索配置) => {
   const result = 执行动作(branch.状态, skill, config.动作上下文)
   if (!result.成功) return undefined
-  const next = { ...branch, 状态: result.状态 }
+  const next = 压缩已结算伤害({ ...branch, 状态: result.状态 })
   return config.触发断潮技能?.includes(skill)
     ? 处理断潮触发(next, 获取技能会心率(config, skill))
     : [next]
@@ -129,7 +131,7 @@ const 执行条件动作 = (branch: 问水概率分支, rule: 问水搜索条件
   const action = 选择断潮条件动作(branch.状态, rule)
   const result = 执行断潮条件规则(branch.状态, rule, config.动作上下文)
   if (!result.成功) return undefined
-  const next = { ...branch, 状态: result.状态 }
+  const next = 压缩已结算伤害({ ...branch, 状态: result.状态 })
   return action && config.触发断潮技能?.includes(action)
     ? 处理断潮触发(next, 获取技能会心率(config, action))
     : [next]
