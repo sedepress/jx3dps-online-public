@@ -3,16 +3,25 @@
  */
 import React, { useEffect, useMemo, useState } from 'react'
 import { Button, Tooltip } from 'antd'
+import { ThunderboltOutlined } from '@ant-design/icons'
 import 获取当前数据 from '@/数据/数据工具/获取当前数据'
 import { 数据埋点 } from '@/工具函数/tools/log'
 import { 循环基础技能数据类型 } from './心法循环模拟/通用/通用框架/类型定义/技能'
-import { useAppSelector } from '@/hooks'
+import { useAppDispatch, useAppSelector } from '@/hooks'
 import CycleSimulatorContext from './context'
 import { 循环日志数据类型 } from './心法循环模拟/通用/通用框架/类型定义/模拟'
 import { 当前计算结果类型 } from '@/@types/输出'
 import { 起手Buff配置 } from './心法循环模拟/通用/通用框架/类型定义/Buff'
 import { 选中秘籍信息 } from '@/@types/秘籍'
 import { 计算增益数据中加速值 } from '@/工具函数/data'
+import OptimalSequenceModal from './心法循环模拟/问水诀/components/OptimalSequenceModal'
+import { 创建问水搜索客户端 } from './心法循环模拟/问水诀/worker/client'
+import {
+  创建当前问水搜索任务,
+  应用当前问水搜索结果,
+  获取当前问水配置指纹,
+  转换当前问水搜索结果,
+} from './心法循环模拟/问水诀/components/adapter'
 
 const 山海心诀循环模拟 = React.lazy(() => import('./心法循环模拟/山海心诀'))
 const 孤锋诀循环模拟 = React.lazy(() => import('./心法循环模拟/孤锋诀'))
@@ -53,7 +62,34 @@ const 支持循环心法 = {
 
 const { 名称 } = 获取当前数据()
 
-function 循环模拟() {
+function 问水最优序列入口() {
+  const [open, setOpen] = useState(false)
+  const data = useAppSelector((state) => state.data)
+  const dispatch = useAppDispatch()
+  const params = { data, dispatch }
+  const initialDuration = Math.round(data.当前计算结果?.秒伤计算时间 || 220)
+
+  return (
+    <>
+      <Button size='small' icon={<ThunderboltOutlined />} onClick={() => setOpen(true)}>
+        最优序列
+      </Button>
+      <OptimalSequenceModal
+        open={open}
+        onClose={() => setOpen(false)}
+        初始战斗时间={initialDuration}
+        当前DPS={data.当前计算结果?.秒伤 || 0}
+        创建客户端={创建问水搜索客户端}
+        创建任务={(战斗时间) => 创建当前问水搜索任务({ ...params, 战斗时间 })}
+        转换结果={(result, task) => 转换当前问水搜索结果(result, task, params)}
+        获取当前配置指纹={() => 获取当前问水配置指纹(data)}
+        应用结果={(result) => 应用当前问水搜索结果(result, params)}
+      />
+    </>
+  )
+}
+
+function 通用循环模拟() {
   const [日志信息, 更新日志信息] = useState<循环日志数据类型[]>([])
   const [模拟DPS结果, 更新模拟DPS结果] = useState<当前计算结果类型>({
     秒伤: 0,
@@ -206,6 +242,10 @@ function 循环模拟() {
       </Button>
     </Tooltip>
   )
+}
+
+function 循环模拟() {
+  return 名称 === '问水诀' ? <问水最优序列入口 /> : <通用循环模拟 />
 }
 
 export default 循环模拟

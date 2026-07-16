@@ -24,6 +24,8 @@ export interface 数据模块类型 {
   装备信息: 装备信息数据类型
   // 当前输出计算循环名
   当前计算循环名称: string
+  // 当前战斗时间
+  当前战斗时间?: string
   // 当前输出计算目标名
   当前输出计算目标名称: string
   // 当前计算过的dps
@@ -50,6 +52,50 @@ const 默认值: 数据模块类型 = {
   ...数据默认值,
 }
 
+const 更新自定义循环列表 = (cycles: 循环数据[], target: 循环数据) => {
+  const exists = cycles.some((cycle) => cycle.名称 === target.名称)
+  return exists
+    ? cycles.map((cycle) => (cycle.名称 === target.名称 ? target : cycle))
+    : cycles.concat(target)
+}
+
+const 转换自定义循环缓存 = (cycles: 循环数据[]) => {
+  const result: Record<string, 循环数据> = {}
+  cycles.forEach((cycle) => {
+    result[cycle.名称] = cycle
+  })
+  return result
+}
+
+const 持久化优化循环 = (state: 数据模块类型) => {
+  const { 缓存映射: 当前缓存映射 } = 获取当前数据()
+  if (!当前缓存映射) return
+  localStorage.setItem(
+    当前缓存映射.自定义循环,
+    JSON.stringify(转换自定义循环缓存(state.自定义循环列表)),
+  )
+  localStorage.setItem(当前缓存映射.当前计算循环名称, state.当前计算循环名称)
+  localStorage.setItem(当前缓存映射.当前奇穴信息, JSON.stringify(state.当前奇穴信息))
+  localStorage.setItem(当前缓存映射.当前秘籍信息, JSON.stringify(state.当前秘籍信息))
+  localStorage.setItem(当前缓存映射.全部方案数据, JSON.stringify(state.全部方案数据))
+}
+
+const 应用优化循环到状态 = (state: 数据模块类型, cycle: 循环数据) => {
+  state.自定义循环列表 = 更新自定义循环列表(state.自定义循环列表 || [], cycle)
+  state.当前计算循环名称 = cycle.名称
+  state.当前奇穴信息 = cycle.奇穴
+  state.当前秘籍信息 = cycle.秘籍 || {}
+  state.当前战斗时间 = undefined
+  const 当前方案 = state.全部方案数据?.[state.当前方案名称]
+  if (当前方案) {
+    当前方案.当前计算循环名称 = cycle.名称
+    当前方案.当前奇穴信息 = cycle.奇穴
+    当前方案.当前秘籍信息 = cycle.秘籍 || {}
+    当前方案.当前战斗时间 = undefined
+  }
+  持久化优化循环(state)
+}
+
 export const 数据模块 = createSlice({
   name: 'data',
   initialState: 默认值,
@@ -73,6 +119,9 @@ export const 数据模块 = createSlice({
     },
     更新当前自定义循环列表: (state, action: PayloadAction<循环数据[]>) => {
       state.自定义循环列表 = action.payload
+    },
+    应用优化循环数据: (state, action: PayloadAction<循环数据>) => {
+      应用优化循环到状态(state, action.payload)
     },
     更新当前输出计算目标名称: (state, action: PayloadAction<string>) => {
       state.当前输出计算目标名称 = action.payload
@@ -116,6 +165,7 @@ export const 数据模块 = createSlice({
         state.增益数据 = 目标方案.增益数据
         state.当前奇穴信息 = 目标方案.当前奇穴信息
         state.当前计算循环名称 = 目标方案.当前计算循环名称
+        state.当前战斗时间 = 目标方案.当前战斗时间
         if (目标方案.当前秘籍信息) {
           state.当前秘籍信息 = 目标方案.当前秘籍信息
         }
@@ -131,6 +181,7 @@ export const {
   更新团队增益轴,
   更新当前计算结果,
   更新当前自定义循环列表,
+  应用优化循环数据,
   更新当前输出计算目标名称,
   更新当前秘籍信息,
   更新当前方案名称,
