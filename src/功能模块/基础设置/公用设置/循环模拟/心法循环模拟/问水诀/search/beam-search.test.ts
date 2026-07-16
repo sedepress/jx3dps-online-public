@@ -74,6 +74,46 @@ describe('问水诀 Beam Search', () => {
     ).toBe(true)
   })
 
+  it('主技能按各自会心率触发断潮', () => {
+    const config = {
+      ...创建概率搜索配置(),
+      主技能: ['黄龙吐翠'],
+      触发断潮技能: ['黄龙吐翠'],
+      会心率映射: { 黄龙吐翠: 0.8 },
+      伤害表: [创建伤害表项('黄龙吐翠', 100)],
+    }
+    const result = 评估问水动作序列(config, ['黄龙吐翠'])
+
+    expect(result.成功).toBe(true)
+    if (!result.成功) return
+    expect(
+      result.候选.分支
+        .filter((branch) => branch.状态.断潮可用)
+        .reduce((sum, branch) => sum + branch.概率, 0),
+    ).toBeCloseTo(0.8)
+  })
+
+  it('条件回退动作按实际施放技能会心率触发断潮', () => {
+    const config = {
+      ...创建概率搜索配置(),
+      条件动作: [{ 技能名称: '断潮', 回退动作: '黄龙吐翠' }],
+      触发断潮技能: ['黄龙吐翠'],
+      会心率映射: { 黄龙吐翠: 0.8 },
+      伤害表: [创建伤害表项('黄龙吐翠', 100)],
+    }
+    const result = 评估问水策略步骤(config, [
+      { 类型: '条件规则', 规则: { 技能名称: '断潮', 回退动作: '黄龙吐翠' } },
+    ])
+
+    expect(result.成功).toBe(true)
+    if (!result.成功) return
+    expect(
+      result.候选.分支
+        .filter((branch) => branch.状态.断潮可用)
+        .reduce((sum, branch) => sum + branch.概率, 0),
+    ).toBeCloseTo(0.8)
+  })
+
   it('0.37 断潮条件策略与穷举 Oracle 一致', () => {
     const config = 创建概率搜索配置()
     const oracle = 穷举问水最优策略({ ...config, 最大扩展数: 5_000 })

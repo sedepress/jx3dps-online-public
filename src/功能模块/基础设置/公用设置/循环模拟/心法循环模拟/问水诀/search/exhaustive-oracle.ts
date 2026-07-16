@@ -24,6 +24,7 @@ export interface 问水搜索配置 {
   动作上下文?: 问水动作上下文
   触发断潮技能?: string[]
   会心率?: number
+  会心率映射?: Record<string, number>
   伤害表: 问水伤害表项[]
   最大理论每帧伤害: number
 }
@@ -112,11 +113,16 @@ const 创建候选 = (
   }
 }
 
+const 获取技能会心率 = (config: 问水搜索配置, skill: string) =>
+  config.会心率映射?.[skill] ?? config.会心率 ?? 0
+
 const 执行主技能 = (branch: 问水概率分支, skill: string, config: 问水搜索配置) => {
   const result = 执行动作(branch.状态, skill, config.动作上下文)
   if (!result.成功) return undefined
   const next = { ...branch, 状态: result.状态 }
-  return config.触发断潮技能?.includes(skill) ? 处理断潮触发(next, config.会心率 || 0) : [next]
+  return config.触发断潮技能?.includes(skill)
+    ? 处理断潮触发(next, 获取技能会心率(config, skill))
+    : [next]
 }
 
 const 执行条件动作 = (branch: 问水概率分支, rule: 问水搜索条件规则, config: 问水搜索配置) => {
@@ -125,7 +131,7 @@ const 执行条件动作 = (branch: 问水概率分支, rule: 问水搜索条件
   if (!result.成功) return undefined
   const next = { ...branch, 状态: result.状态 }
   return action && config.触发断潮技能?.includes(action)
-    ? 处理断潮触发(next, config.会心率 || 0)
+    ? 处理断潮触发(next, 获取技能会心率(config, action))
     : [next]
 }
 

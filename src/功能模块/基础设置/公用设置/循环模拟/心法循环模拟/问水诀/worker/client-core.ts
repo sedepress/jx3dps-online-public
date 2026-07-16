@@ -21,6 +21,14 @@ const 清理当前任务 = (state: 客户端状态) => {
   state.callbacks = undefined
 }
 
+const 废弃Worker = (state: 客户端状态) => {
+  const worker = state.worker
+  state.worker = undefined
+  worker?.terminate()
+}
+
+const 标准化错误 = (error: unknown) => (error instanceof Error ? error : new Error(String(error)))
+
 const 处理Worker消息 = (state: 客户端状态, message: Worker出站消息) => {
   if (!state.currentTaskId || message.任务ID !== state.currentTaskId) return
   if (message.类型 === '进度') state.callbacks?.进度?.(message)
@@ -43,10 +51,8 @@ const 获取Worker = (state: 客户端状态) => {
     处理Worker消息(state, event.data)
   state.worker.onerror = (event) => {
     const handleError = state.callbacks?.错误
-    const failedWorker = state.worker
     清理当前任务(state)
-    state.worker = undefined
-    failedWorker?.terminate()
+    废弃Worker(state)
     handleError?.(new Error(event.message || 'Worker 运行失败'))
   }
   return state.worker
@@ -54,8 +60,15 @@ const 获取Worker = (state: 客户端状态) => {
 
 const 请求取消任务 = (state: 客户端状态, taskId = state.currentTaskId, abandon = false) => {
   if (!taskId || taskId !== state.currentTaskId) return
-  state.worker?.postMessage({ 类型: '取消', 任务ID: taskId })
-  if (abandon) 清理当前任务(state)
+  try {
+    state.worker?.postMessage({ 类型: '取消', 任务ID: taskId })
+    if (abandon) 清理当前任务(state)
+  } catch (error) {
+    const handleError = state.callbacks?.错误
+    清理当前任务(state)
+    废弃Worker(state)
+    if (!abandon) handleError?.(标准化错误(error))
+  }
 }
 
 export const 创建问水搜索客户端核心 = (createWorker: Worker工厂) => {
@@ -66,16 +79,20 @@ export const 创建问水搜索客户端核心 = (createWorker: Worker工厂) =>
     const taskId = `wenshui-${(state.sequence += 1)}`
     state.currentTaskId = taskId
     state.callbacks = nextCallbacks
-    获取Worker(state).postMessage({ 类型: '开始', 任务ID: taskId, 参数: params })
+    try {
+      获取Worker(state).postMessage({ 类型: '开始', 任务ID: taskId, 参数: params })
+    } catch (error) {
+      清理当前任务(state)
+      废弃Worker(state)
+      throw error
+    }
     return taskId
   }
 
   const 销毁 = () => {
-    if (state.currentTaskId)
-      state.worker?.postMessage({ 类型: '取消', 任务ID: state.currentTaskId })
+    if (state.currentTaskId) 请求取消任务(state, state.currentTaskId, true)
     清理当前任务(state)
-    state.worker?.terminate()
-    state.worker = undefined
+    废弃Worker(state)
   }
 
   return {

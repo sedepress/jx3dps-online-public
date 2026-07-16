@@ -125,16 +125,41 @@ describe('问水诀 Worker 客户端', () => {
     worker.emit({ 类型: '完成', 任务ID: nextTask, 结果: 创建完成结果() })
     expect(nextComplete).toHaveBeenCalledTimes(1)
   })
+
+  it('postMessage 同步失败后清理任务并使用新 Worker 重试', () => {
+    const failedWorker = new MockWorker()
+    const nextWorker = new MockWorker()
+    failedWorker.throwNext = new DOMException('无法克隆', 'DataCloneError')
+    const workers = [failedWorker, nextWorker]
+    const client = 创建问水搜索客户端核心(() => workers.shift() as unknown as Worker)
+
+    expect(() => client.开始(创建启动参数())).toThrow('无法克隆')
+    expect(client.当前任务ID()).toBeUndefined()
+    expect(failedWorker.terminated).toBe(true)
+
+    const task = client.开始(创建启动参数())
+    expect(client.当前任务ID()).toBe(task)
+    expect(nextWorker.sent).toContainEqual(expect.objectContaining({ 类型: '开始', 任务ID: task }))
+  })
 })
 
 class MockWorker {
   sent: unknown[] = []
+  throwNext?: Error
+  terminated = false
   onmessage: ((event: MessageEvent<Worker出站消息>) => void) | null = null
   onerror: ((event: ErrorEvent) => void) | null = null
   postMessage(message: unknown) {
+    if (this.throwNext) {
+      const error = this.throwNext
+      this.throwNext = undefined
+      throw error
+    }
     this.sent.push(message)
   }
-  terminate() {}
+  terminate() {
+    this.terminated = true
+  }
   emit(message: Worker出站消息) {
     this.onmessage?.({ data: message } as MessageEvent<Worker出站消息>)
   }
