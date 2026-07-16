@@ -1,0 +1,140 @@
+.body {
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+  min-width: 0;
+}
+
+.duration {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+}
+
+.duration > span {
+  flex: 0 0 auto;
+  font-weight: 600;
+}
+
+.status {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.metrics {
+  display: grid;
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+  gap: 8px 16px;
+  color: #666;
+  font-size: 13px;
+}
+
+.metrics span,
+.metrics strong {
+  min-width: 0;
+  overflow-wrap: anywhere;
+}
+
+.metrics strong {
+  display: block;
+  color: #222;
+  font-size: 14px;
+}
+
+.result {
+  min-width: 0;
+}
+
+.resultSummary {
+  display: flex;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 8px 16px;
+  margin-bottom: 8px;
+  color: #666;
+}
+
+.resultSummary strong {
+  color: #1677ff;
+  font-size: 18px;
+}
+
+.sequencePanel {
+  min-width: 0;
+}
+
+.sequenceList {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 6px 24px;
+  max-height: 280px;
+  margin: 0;
+  padding: 0 0 0 28px;
+  overflow: auto;
+}
+
+.sequenceList li {
+  min-width: 0;
+  padding-right: 8px;
+  overflow-wrap: anywhere;
+}
+
+.rules {
+  margin-top: 16px;
+  padding-top: 12px;
+  border-top: 1px solid #f0f0f0;
+}
+
+.rules h4,
+.rules p {
+  margin: 0 0 6px;
+}
+
+.statistics {
+  max-height: 320px;
+  overflow: auto;
+  border-top: 1px solid #f0f0f0;
+}
+
+.statisticsHeader,
+.statisticsRow {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) 120px;
+  gap: 16px;
+  padding: 8px 12px;
+  border-bottom: 1px solid #f0f0f0;
+}
+
+.statisticsHeader {
+  position: sticky;
+  top: 0;
+  z-index: 1;
+  background: #fafafa;
+  font-weight: 600;
+}
+
+.statisticsHeader span:last-child,
+.statisticsRow span:last-child {
+  text-align: right;
+}
+
+@media (max-width: 640px) {
+  .duration {
+    align-items: flex-start;
+    flex-direction: column;
+  }
+
+  .metrics {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+
+  .sequenceList {
+    grid-template-columns: minmax(0, 1fr);
+  }
+
+  .statisticsHeader,
+  .statisticsRow {
+    grid-template-columns: minmax(0, 1fr) 88px;
+  }
+}
