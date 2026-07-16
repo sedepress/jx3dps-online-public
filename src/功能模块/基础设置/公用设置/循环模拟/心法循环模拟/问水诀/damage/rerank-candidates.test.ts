@@ -172,6 +172,22 @@ describe('问水诀伤害表与精确重排', () => {
     expect(result.候选[0].精确DPS).toBeGreaterThan(result.候选[1].精确DPS)
   })
 
+  it('轻剑资源技能可以进入精确重排', () => {
+    const 技能详情 = ['黄龙吐翠', '平湖断月', '九溪弥烟-轻'].map((技能名称) => ({
+      技能名称,
+      技能数量: 1,
+    }))
+    const result = 精确重排问水候选({
+      候选: [{ id: '轻剑资源技能', 近似期望伤害: 1, 技能详情 }],
+      计算上下文,
+      最大复算数: 1,
+    })
+
+    expect(result.成功).toBe(true)
+    if (!result.成功) return
+    expect(result.候选[0].精确总伤).toBeGreaterThan(0)
+  })
+
   it('精确复算拒绝未知技能候选', () => {
     const result = 精确重排问水候选({
       候选: [{ id: 'invalid', 近似期望伤害: 1, 技能详情: [{ 技能名称: '未知技能', 技能数量: 1 }] }],

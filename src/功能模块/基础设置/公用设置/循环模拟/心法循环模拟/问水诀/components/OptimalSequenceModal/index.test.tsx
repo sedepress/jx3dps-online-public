@@ -186,6 +186,11 @@ describe('问水诀最优序列控制器', () => {
     expect(task.搜索参数.伤害表.length).toBeGreaterThan(10)
     expect(task.搜索参数.初始状态.待生效事件).toEqual([])
     expect(task.搜索参数.伤害表.every((item) => Number.isFinite(item.单次施放伤害))).toBe(true)
+    ;['黄龙吐翠', '平湖断月', '九溪弥烟-轻'].forEach((技能名称) => {
+      expect(
+        task.搜索参数.伤害表.find((item) => item.技能名称 === 技能名称)?.单次施放伤害,
+      ).toBeGreaterThan(0)
+    })
     const testTask = {
       ...task,
       搜索参数: { ...task.搜索参数, Beam宽度: 8, 扩展预算: 50 },
