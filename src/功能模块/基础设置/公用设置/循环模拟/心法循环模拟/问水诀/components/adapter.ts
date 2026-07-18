@@ -11,6 +11,11 @@ import { 问水Runner结果 } from '../search/runner'
 import { 问水搜索任务 } from './OptimalSequenceModal'
 import { 问水优化展示结果 } from './SearchResult'
 import { 创建问水优化搜索任务, 创建问水配置指纹 } from './controller'
+import {
+  精确重排问水展示候选,
+  问水展示候选,
+} from './exact-candidates'
+import { 问水搜索候选 } from '../search/exhaustive-oracle'
 
 interface 问水主线程适配参数 {
   data: 数据模块类型
@@ -167,11 +172,67 @@ export const 创建当前问水搜索任务 = (params: 问水主线程适配参�
     配置指纹: 获取当前问水配置指纹(params.data),
     计算单次伤害: 创建单次伤害计算器(params, params.战斗时间),
   })
-  return { ...task, 当前循环基线: 获取当前循环基线(params, params.战斗时间) }
+  const baseline = 获取当前循环基线(params, params.战斗时间)
+  const baselineSequence = task.搜索参数.基线动作序列
+  return {
+    ...task,
+    当前循环基线:
+      baseline && baselineSequence?.length
+        ? { ...baseline, 技能序列: baselineSequence }
+        : baseline,
+  }
 }
 
 const 获取循环增益签名 = (item: 问水聚合项) =>
   Array.from(new Set(item.增益签名.concat(item.快照签名))).sort()
+
+const 转换搜索候选 = (candidate: 问水搜索候选, index: number) => {
+  const aggregated = 聚合问水策略({ 分支: candidate.分支 })
+  if (!aggregated.成功) return undefined
+  const cycle = 转换问水聚合项为循环({
+    项目: aggregated.项目,
+    解析增益签名: 获取循环增益签名,
+  })
+  if (!cycle.成功) return undefined
+  return {
+    id: `搜索候选-${index}`,
+    来源: '搜索候选' as const,
+    技能序列: candidate.主序列,
+    条件规则: candidate.条件规则,
+    技能详情: cycle.技能详情,
+  }
+}
+
+const 创建预设候选 = (baseline?: 问水当前循环基线): 问水展示候选 | undefined =>
+  baseline
+    ? {
+        id: '预设循环',
+        来源: '预设循环',
+        技能序列: baseline.技能序列,
+        条件规则: [],
+        技能详情: baseline.技能详情,
+      }
+    : undefined
+
+const 获取候选正式DPS = (
+  candidate: 问水展示候选,
+  task: 问水搜索任务,
+  params: 问水主线程适配参数,
+) => {
+  const baseline = task.当前循环基线
+  const detail = baseline ? { ...baseline.循环详情, 技能详情: candidate.技能详情 } : undefined
+  try {
+    const exact = 执行问水DPS计算({
+      ...params,
+      战斗时间: detail?.战斗时间 || task.战斗时间,
+      技能详情: candidate.技能详情,
+      循环详情: detail,
+    })
+    return Number.isFinite(exact.秒伤) ? exact.秒伤 : undefined
+  } catch {
+    return undefined
+  }
+}
 
 export const 转换当前问水搜索结果 = (
   result: 问水Runner结果,
@@ -179,55 +240,36 @@ export const 转换当前问水搜索结果 = (
   params: 问水主线程适配参数,
 ): 问水优化展示结果 => {
   if (!result.成功) throw new Error(result.失败原因)
-  const aggregated = 聚合问水策略({ 分支: result.最佳候选.分支 })
-  if (!aggregated.成功) throw new Error(aggregated.失败原因)
-  const cycle = 转换问水聚合项为循环({
-    项目: aggregated.项目,
-    解析增益签名: 获取循环增益签名,
-  })
-  if (!cycle.成功) throw new Error(cycle.失败原因)
   const baseline = task.当前循环基线
-  const 候选循环详情 = baseline ? { ...baseline.循环详情, 技能详情: cycle.技能详情 } : undefined
-  const exact = 执行问水DPS计算({
-    ...params,
-    战斗时间: 候选循环详情?.战斗时间 || task.战斗时间,
-    技能详情: cycle.技能详情,
-    循环详情: 候选循环详情,
+  const search = (result.候选列表 || [result.最佳候选])
+    .map(转换搜索候选)
+    .filter(
+      (candidate): candidate is Extract<问水展示候选, { 来源: '搜索候选' }> => !!candidate,
+    )
+  const ranked = 精确重排问水展示候选({
+    预设: 创建预设候选(baseline),
+    候选: search,
+    计算DPS: (candidate) => 获取候选正式DPS(candidate, task, params),
   })
-  if (!Number.isFinite(exact.秒伤)) {
-    throw new Error('候选精确 DPS 不是有限数')
-  }
-  if (baseline && !是否真实提升(exact.秒伤, baseline.DPS)) {
-    return {
-      战斗时间: task.战斗时间,
-      配置指纹: task.配置指纹,
-      技能序列: baseline.技能序列,
-      条件规则: [],
-      技能详情: baseline.技能详情,
-      预期DPS: baseline.DPS,
-      当前循环DPS: baseline.DPS,
-      是否优于当前循环: false,
-      搜索耗时: result.workerElapsedMs,
-      扩展节点数: result.扩展节点数,
-      扩展预算: task.搜索参数.扩展预算,
-      提前结束: result.是否提前结束,
-      结束原因: '保留当前循环',
-    }
-  }
+  if (!ranked.成功) throw new Error(ranked.失败原因)
+  const winner = ranked.候选[0]
+  const improved = winner.来源 === '搜索候选' && 是否真实提升(winner.DPS, baseline?.DPS)
   return {
     战斗时间: task.战斗时间,
     配置指纹: task.配置指纹,
-    技能序列: result.最佳候选.主序列,
-    条件规则: result.最佳候选.条件规则,
-    技能详情: cycle.技能详情,
-    预期DPS: exact.秒伤,
+    技能序列: winner.技能序列,
+    条件规则: winner.条件规则,
+    技能详情: winner.技能详情,
+    结果来源: winner.来源,
+    预期DPS: winner.DPS,
+    预设DPS: baseline?.DPS,
     当前循环DPS: baseline?.DPS,
-    是否优于当前循环: 是否真实提升(exact.秒伤, baseline?.DPS),
+    是否优于当前循环: improved,
     搜索耗时: result.workerElapsedMs,
     扩展节点数: result.扩展节点数,
     扩展预算: task.搜索参数.扩展预算,
     提前结束: result.是否提前结束,
-    结束原因: result.结束原因,
+    结束原因: winner.来源 === '预设循环' ? '保留当前循环' : result.结束原因,
   }
 }
 

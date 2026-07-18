@@ -3,6 +3,7 @@ import { Alert, Tabs, Tag } from 'antd'
 import { 循环技能详情 } from '@/@types/循环'
 import { 问水搜索条件规则 } from '../search/exhaustive-oracle'
 import styles from './OptimalSequenceModal/index.module.less'
+import { 技能序列展示 } from './skill-display'
 
 export interface 问水优化展示结果 {
   战斗时间: number
@@ -10,7 +11,9 @@ export interface 问水优化展示结果 {
   技能序列: string[]
   条件规则: 问水搜索条件规则[]
   技能详情: 循环技能详情[]
+  结果来源: '预设循环' | '搜索候选'
   预期DPS: number
+  预设DPS?: number
   搜索耗时: number
   扩展节点数: number
   扩展预算: number
@@ -32,11 +35,7 @@ const 条件规则文案 = (rule: 问水搜索条件规则) =>
 
 const 技能序列 = ({ 结果 }: SearchResultProps) => (
   <div className={styles.sequencePanel}>
-    <ol className={styles.sequenceList}>
-      {结果.技能序列.map((skill, index) => (
-        <li key={`${skill}-${index}`}>{skill}</li>
-      ))}
-    </ol>
+    <技能序列展示 技能序列={结果.技能序列} />
     {结果.条件规则.length ? (
       <div className={styles.rules}>
         <h4>条件规则</h4>
@@ -65,10 +64,17 @@ const 技能统计 = ({ 结果 }: SearchResultProps) => (
 
 function SearchResult(props: SearchResultProps) {
   const { 结果, 配置已过期 } = props
+  const 预设DPS = 结果.预设DPS ?? 结果.当前循环DPS
+  const 提升DPS = 预设DPS === undefined ? undefined : 结果.预期DPS - 预设DPS
   return (
     <div className={styles.result}>
       <div className={styles.resultSummary}>
         <strong>{`${Math.round(结果.预期DPS).toLocaleString()} DPS`}</strong>
+        <span>{`结果来源：${结果.结果来源}`}</span>
+        {预设DPS !== undefined ? <span>{`预设：${Math.round(预设DPS).toLocaleString()}`}</span> : null}
+        {提升DPS !== undefined ? (
+          <span>{`提升：${Math.round(提升DPS).toLocaleString()}`}</span>
+        ) : null}
         <span>{`${结果.扩展节点数.toLocaleString()} 次扩展`}</span>
         <span>{`${(结果.搜索耗时 / 1000).toFixed(1)}s`}</span>
         {结果.提前结束 ? <Tag color='gold'>提前结束</Tag> : null}

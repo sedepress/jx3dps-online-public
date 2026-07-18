@@ -80,6 +80,54 @@
   overflow-wrap: anywhere;
 }
 
+.sequenceFlow {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 10px 8px;
+  max-height: 360px;
+  padding: 4px;
+  overflow: auto;
+}
+
+.skillToken {
+  position: relative;
+  display: inline-flex;
+  align-items: center;
+  width: 92px;
+  min-height: 56px;
+  padding: 4px;
+  border: 1px solid #f0f0f0;
+  border-radius: 6px;
+  background: #fff;
+}
+
+.skillIndex {
+  align-self: flex-start;
+  width: 18px;
+  color: #999;
+  font-size: 11px;
+  text-align: center;
+}
+
+.skillIcon {
+  width: 32px;
+  height: 32px;
+  flex: 0 0 32px;
+  border-radius: 4px;
+  object-fit: cover;
+}
+
+.skillName {
+  min-width: 0;
+  margin-left: 4px;
+  overflow: hidden;
+  color: #333;
+  font-size: 11px;
+  line-height: 14px;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
 .rules {
   margin-top: 16px;
   padding-top: 12px;
