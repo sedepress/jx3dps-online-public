@@ -17,6 +17,9 @@ shuadps.js
 /build
 # build.*
 
+# isolated agent worktrees
+/.worktrees/
+
 # misc
 .DS_Store
 .env.local
