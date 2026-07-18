@@ -45,4 +45,28 @@ describe('问水诀 Excel 基线执行', () => {
 
     expect(result).toMatchObject({ 成功: true, 执行数量: 154 })
   })
+
+  it('220 秒斩岳基线按如风加速覆盖预设主动技能数量', () => {
+    const initial = {
+      ...创建问水起手状态({ 战斗秒数: 220, 加速值: 13739, 网络延迟: 1 }),
+      姿态: '重剑' as const,
+      剑气: 100,
+    }
+    const result = 执行Excel基线(initial, 获取Excel基线('紫武', '斩岳'), {
+      奇穴: ['叠锋意', '斩岳', '造化', '山倾', '层云', '雾锁', '怜光', '如风'],
+      秘籍: { 夕照雷峰: ['4%伤害', '3%伤害'] },
+    })
+    const counts = result.状态.技能记录.reduce<Record<string, number>>((map, item) => {
+      map[item.技能名称] = (map[item.技能名称] || 0) + 1
+      return map
+    }, {})
+
+    expect(result.成功).toBe(true)
+    expect(result.状态.当前帧).toBe(3518)
+    expect(counts['听雷-轻']).toBe(4)
+    expect(counts['夕照雷峰']).toBe(85)
+    expect((counts['云飞玉皇'] || 0) + (counts['云景·云飞玉皇'] || 0)).toBe(61)
+    expect(counts['鹤归孤山']).toBe(15)
+    expect(counts['风来吴山']).toBe(3)
+  })
 })

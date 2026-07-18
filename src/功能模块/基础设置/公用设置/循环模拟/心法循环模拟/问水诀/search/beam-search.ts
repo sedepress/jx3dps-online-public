@@ -18,6 +18,7 @@ export type 问水Beam搜索结果 =
   | {
       成功: true
       最佳候选: 问水搜索候选
+      候选列表: 问水搜索候选[]
       扩展节点数: number
       结束原因: '空间收敛' | '扩展预算'
       基线失败原因?: string
@@ -30,10 +31,26 @@ interface Beam运行状态 {
   actionIndex: number
   next: 问水搜索候选[]
   best: 问水搜索候选
+  terminals: 问水搜索候选[]
   expanded: number
   stableOrder: number
   bestByState: Map<string, 问水搜索候选>
   failureReason?: string
+}
+
+const 最多候选数 = 16
+
+const 获取候选序列键 = (candidate: 问水搜索候选) =>
+  JSON.stringify({ 主序列: candidate.主序列, 条件规则: candidate.条件规则 })
+
+const 记录终点候选 = (terminals: 问水搜索候选[], candidates: 问水搜索候选[]) => {
+  const merged = new Map(terminals.map((item) => [获取候选序列键(item), item]))
+  candidates.forEach((item) => {
+    const key = 获取候选序列键(item)
+    const previous = merged.get(key)
+    if (!previous || 比较问水搜索候选(item, previous) < 0) merged.set(key, item)
+  })
+  return Array.from(merged.values()).sort(比较问水搜索候选).slice(0, 最多候选数)
 }
 
 export interface 问水Beam会话 {
@@ -146,6 +163,9 @@ const 推进Beam到预算 = (session: 问水Beam会话, targetBudget: number): �
     }
     if (expanded.是否完成) {
       runtime = { ...runtime, frontierIndex: runtime.frontierIndex + 1, actionIndex: 0 }
+      if (!expanded.候选.length) {
+        runtime = { ...runtime, terminals: 记录终点候选(runtime.terminals, [candidate]) }
+      }
     }
     if (runtime.frontierIndex >= runtime.frontier.length)
       runtime = 完成Beam层(runtime, session.Beam宽度)
@@ -177,6 +197,7 @@ export const 创建问水Beam会话 = ({
         actionIndex: 0,
         next: [],
         best: seeded.候选,
+        terminals: [],
         expanded: 0,
         stableOrder: 1,
         bestByState: new Map([[获取问水策略状态键(initial.候选.分支), initial.候选]]),
@@ -197,16 +218,22 @@ export const 推进问水Beam会话 = (session: 问水Beam会话, chunkBudget: n
   return { 成功: true as const, 会话: next }
 }
 
-export const 获取问水Beam会话结果 = (session: 问水Beam会话) => ({
-  最佳候选: session.runtime.best,
-  扩展节点数: session.runtime.expanded,
-  结束原因: session.runtime.frontier.length
-    ? session.runtime.expanded >= session.扩展预算
-      ? ('扩展预算' as const)
-      : ('进行中' as const)
-    : ('空间收敛' as const),
-  ...(session.基线失败原因 ? { 基线失败原因: session.基线失败原因 } : {}),
-})
+export const 获取问水Beam会话结果 = (session: 问水Beam会话) => {
+  const 候选列表 = session.runtime.terminals.length
+    ? session.runtime.terminals.slice().sort(比较问水搜索候选)
+    : [session.runtime.best]
+  return {
+    最佳候选: session.runtime.frontier.length ? session.runtime.best : 候选列表[0],
+    候选列表,
+    扩展节点数: session.runtime.expanded,
+    结束原因: session.runtime.frontier.length
+      ? session.runtime.expanded >= session.扩展预算
+        ? ('扩展预算' as const)
+        : ('进行中' as const)
+      : ('空间收敛' as const),
+    ...(session.基线失败原因 ? { 基线失败原因: session.基线失败原因 } : {}),
+  }
+}
 
 export const 搜索问水Beam策略 = (params: 搜索问水Beam策略参数): 问水Beam搜索结果 => {
   const created = 创建问水Beam会话(params)

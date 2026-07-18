@@ -174,7 +174,7 @@ const 获取基线序列 = (params: 创建问水优化搜索任务参数, initia
     贪心动作顺序: Object.keys(问水技能定义),
     动作上下文: { 奇穴: params.奇穴, 秘籍: params.秘籍 },
   })
-  return baseline.成功 && baseline.来源 === 'Excel' ? baseline.动作序列 : undefined
+  return baseline.成功 ? baseline.动作序列 : undefined
 }
 
 export const 创建问水优化搜索任务 = (params: 创建问水优化搜索任务参数): 问水搜索任务 => {

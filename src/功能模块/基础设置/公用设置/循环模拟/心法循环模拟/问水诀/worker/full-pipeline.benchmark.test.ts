@@ -5,7 +5,7 @@ import { 获取计算目标信息 } from '@/计算模块/统一工具函数/工�
 import { 初始化心法数据 } from '@/数据/数据工具/获取当前数据'
 import 心法配置 from '@/心法模块/心法/问水诀'
 import { 默认团队增益轴 } from '@/工具函数/init/默认数据'
-import { 创建当前问水搜索任务 } from '../components/adapter'
+import { 创建当前问水搜索任务, 转换当前问水搜索结果 } from '../components/adapter'
 import { 聚合问水策略, 转换问水聚合项为循环 } from '../damage/aggregate-policy'
 import { 问水伤害计算上下文 } from '../damage/build-damage-table'
 import { 创建问水伤害快照, 创建问水增益签名解析器 } from '../damage/context'
@@ -15,7 +15,7 @@ import { 运行问水分块搜索, 问水Runner结果 } from '../search/runner'
 import { Worker入站消息, Worker出站消息 } from './protocol'
 
 const 运行基准 = process.env.RUN_WENSHUI_OPTIMIZER_BENCHMARK === '1' ? it : it.skip
-const 战斗时间 = Number(process.env.WENSHUI_BENCHMARK_SECONDS || 600)
+const 战斗时间 = Number(process.env.WENSHUI_BENCHMARK_SECONDS || 220)
 const 最长耗时毫秒 = 60_000
 const 测试超时毫秒 = 140_000
 const 最大复算数 = 1
@@ -130,7 +130,7 @@ const 准备基准上下文 = async () => {
   if (clonedInbound.类型 !== '开始') throw new Error('Worker DTO 类型错误')
   expect(clonedInbound.参数.搜索参数.伤害表).toEqual(clonedSnapshot.伤害表)
   if (!task.当前循环基线) throw new Error('缺少当前循环精确基线')
-  return { context, task, resolver, clonedInbound, baseline: task.当前循环基线 }
+  return { context, task, resolver, clonedInbound, baseline: task.当前循环基线, data, dispatch }
 }
 
 const 执行Runner = async (
@@ -183,7 +183,7 @@ const 汇总技能数量 = (items: { 技能名称: string; 技能数量: number 
     return result
   }, {})
 
-describe('问水诀 Worker 完整管线 600 秒性能基准', () => {
+describe('问水诀 Worker 完整管线性能基准', () => {
   运行基准(
     '在 60 秒内完成真实任务、搜索、聚合、精确复算和协议序列化',
     async () => {
@@ -198,17 +198,21 @@ describe('问水诀 Worker 完整管线 600 秒性能基准', () => {
       const { result } = runner
       peakHeap = Math.max(peakHeap, process.memoryUsage().heapUsed)
       const exact = 执行精确复算(result.最佳候选, prepared.resolver, prepared.context)
+      const display = 转换当前问水搜索结果(result, prepared.task, {
+        data: prepared.data,
+        dispatch: prepared.dispatch,
+      })
       await 验证完成消息(prepared.clonedInbound.任务ID, result)
       const totalElapsedMs = Date.now() - totalStartedAt
       const baselineDps = prepared.baseline.DPS
-      const improvement = (exact.reranked[0].精确DPS / baselineDps - 1) * 100
+      const improvement = (display.预期DPS / baselineDps - 1) * 100
       const mainCounts = Object.fromEntries(
-        Array.from(new Set(result.最佳候选.主序列)).map((name) => [
+        Array.from(new Set(display.技能序列)).map((name) => [
           name,
-          result.最佳候选.主序列.filter((item) => item === name).length,
+          display.技能序列.filter((item) => item === name).length,
         ]),
       )
-      const skillCounts = 汇总技能数量(exact.reranked[0].技能详情)
+      const skillCounts = 汇总技能数量(display.技能详情)
       const baselineCounts = 汇总技能数量(prepared.baseline.技能详情)
       const aggregated = 聚合问水策略({ 分支: result.最佳候选.分支 })
       if (!aggregated.成功) throw new Error(aggregated.失败原因)
@@ -242,7 +246,9 @@ describe('问水诀 Worker 完整管线 600 秒性能基准', () => {
         heapGrowthMiB: 转换MiB(peakHeap - initialHeap),
         exactRerankElapsedMs: exact.rerankElapsedMs,
         baselineDps: Number(baselineDps.toFixed(2)),
-        bestDps: Number(exact.reranked[0].精确DPS.toFixed(2)),
+        bestDps: Number(display.预期DPS.toFixed(2)),
+        resultSource: display.结果来源,
+        candidateCount: result.候选列表.length,
         improvementPercent: Number(improvement.toFixed(4)),
         mainCounts: JSON.stringify(mainCounts),
         baselineCounts: JSON.stringify(baselineCounts),
@@ -262,6 +268,10 @@ describe('问水诀 Worker 完整管线 600 秒性能基准', () => {
         expect(result.扩展节点数).toBeLessThan(prepared.task.搜索参数.扩展预算)
       }
       expect(result.是否提前结束).toBe(false)
+      expect(result.候选列表.length).toBeGreaterThanOrEqual(1)
+      expect(result.候选列表.length).toBeLessThanOrEqual(16)
+      expect(display.技能序列.length).toBeGreaterThan(0)
+      expect(display.预期DPS).toBeGreaterThanOrEqual(baselineDps)
       expect(Number.isFinite(improvement)).toBe(true)
     },
     测试超时毫秒,

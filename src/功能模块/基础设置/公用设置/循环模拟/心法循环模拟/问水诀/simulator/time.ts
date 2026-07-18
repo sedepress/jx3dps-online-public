@@ -5,7 +5,8 @@ import { 获取技能充能结束帧, 恢复到时技能充能 } from './resourc
 
 type 问水玩家动作 = (state: 问水模拟状态) => 问水模拟状态
 
-export const 获取问水实际帧数 = (原始帧数: number, 加速值: number) => 获取实际帧数(原始帧数, 加速值)
+export const 获取问水实际帧数 = (原始帧数: number, 加速值: number, 郭氏加速 = 0) =>
+  获取实际帧数(原始帧数, 加速值, 郭氏加速)
 
 export const 伤害是否计入 = (命中帧: number, 结束帧: number) => 命中帧 <= 结束帧
 

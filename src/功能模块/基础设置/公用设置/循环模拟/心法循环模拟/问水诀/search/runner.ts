@@ -28,6 +28,7 @@ export type 问水Runner结果 =
   | {
       成功: true
       最佳候选: 问水搜索候选
+      候选列表: 问水搜索候选[]
       扩展节点数: number
       结束原因: 问水Runner结束原因
       是否提前结束: boolean
@@ -53,6 +54,7 @@ const 创建Runner结果 = (
   return {
     成功: true,
     最佳候选: result.最佳候选,
+    候选列表: result.候选列表,
     扩展节点数: result.扩展节点数,
     结束原因: reason,
     是否提前结束: reason === '用户取消' || reason === '紧急上限',

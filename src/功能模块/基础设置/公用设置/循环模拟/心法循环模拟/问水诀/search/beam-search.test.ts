@@ -23,6 +23,26 @@ const 派生技能伤害: Record<string, number> = {
 const 技能伤害 = { ...主技能伤害, ...派生技能伤害 }
 
 describe('问水诀 Beam Search', () => {
+  it('保留多个完整终点候选并按近似伤害降序返回', () => {
+    const result = 搜索问水Beam策略({
+      ...创建搜索配置(5),
+      Beam宽度: 8,
+      扩展预算: 2_000,
+    })
+
+    expect(result.成功).toBe(true)
+    if (!result.成功) return
+    expect(result.候选列表.length).toBeGreaterThan(1)
+    expect(result.候选列表.length).toBeLessThanOrEqual(16)
+    expect(new Set(result.候选列表.map((candidate) => candidate.主序列.join('|'))).size).toBe(
+      result.候选列表.length,
+    )
+    expect(result.候选列表[0]).toEqual(result.最佳候选)
+    result.候选列表.slice(1).forEach((candidate, index) => {
+      expect(result.候选列表[index].期望总伤).toBeGreaterThanOrEqual(candidate.期望总伤)
+    })
+  })
+
   it.each([1, 2, 3, 4, 5, 6, 7, 8, 9, 10])('%s 秒结果与穷举 Oracle 一致', (seconds) => {
     const config = 创建搜索配置(seconds)
     const oracle = 穷举问水最优策略({ ...config, 最大扩展数: 200_000 })

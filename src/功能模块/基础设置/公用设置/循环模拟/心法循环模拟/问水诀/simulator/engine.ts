@@ -20,6 +20,10 @@ import {
 } from './resources'
 
 const 空上下文: 问水动作上下文 = {}
+const 如风郭氏加速 = 82
+
+const 获取奇穴郭氏加速 = (context: 问水动作上下文) =>
+  context.奇穴?.includes('如风') ? 如风郭氏加速 : 0
 
 const 获取技能起始帧 = (state: 问水模拟状态, 技能名称: string, 技能: 问水技能定义) => {
   const CD记录名称 = 技能.CD记录名称 || 技能名称
@@ -54,7 +58,9 @@ const 获取读条帧 = (
   if (技能名称 === '夕照雷峰' && (context.秘籍?.夕照雷峰?.length || 0) > 2) {
     基础读条帧 = 22
   }
-  return 基础读条帧 ? 获取问水实际帧数(基础读条帧, state.加速值) : 0
+  return 基础读条帧
+    ? 获取问水实际帧数(基础读条帧, state.加速值, 获取奇穴郭氏加速(context))
+    : 0
 }
 
 const 创建动作事件 = (
@@ -120,7 +126,12 @@ const 应用技能变化 = (
       ? 获取重剑剑气变化(state, { 技能名称, 基础变化: 技能.剑气变化, context })
       : 技能.剑气变化
   const 剑气 = Math.max(0, Math.min(获取当前剑气上限(state), state.剑气 + 剑气变化))
-  const GCD帧 = 技能.基础GCD帧 ? Math.max(20, 获取问水实际帧数(技能.基础GCD帧, state.加速值)) : 0
+  const GCD帧 = 技能.基础GCD帧
+    ? Math.max(
+        20,
+        获取问水实际帧数(技能.基础GCD帧, state.加速值, 获取奇穴郭氏加速(context)),
+      )
+    : 0
   const 读条帧 = 获取读条帧(state, { 技能名称, 技能, context })
   const 命中帧 = 开始帧 + 读条帧
   const 技能CD = 技能.基础CD帧
