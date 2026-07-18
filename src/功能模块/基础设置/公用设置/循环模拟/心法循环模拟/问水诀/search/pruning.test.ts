@@ -50,6 +50,23 @@ describe('问水诀搜索剪枝基础', () => {
     expect(获取问水状态键(base)).toBe(获取问水状态键(equivalent))
   })
 
+  it('四季普通攻击累计奇偶不同的状态不能合并', () => {
+    const base = 创建基础状态()
+    const 偶数 = {
+      ...base,
+      技能记录: [
+        { 技能名称: '夕照雷峰', 开始帧: 0, 命中帧: 0, 结束帧: 0 },
+        { 技能名称: '云飞玉皇', 开始帧: 0, 命中帧: 0, 结束帧: 0 },
+      ],
+    }
+    const 奇数 = {
+      ...base,
+      技能记录: [{ 技能名称: '夕照雷峰', 开始帧: 0, 命中帧: 0, 结束帧: 0 }],
+    }
+
+    expect(获取问水状态键(偶数)).not.toBe(获取问水状态键(奇数))
+  })
+
   it('同帧同序号事件的原始稳定顺序不同时状态键不同', () => {
     const first = { 事件类型: '伤害' as const, 生效帧: 8, 序号: 1, 技能名称: '听雷-轻' }
     const second = {
@@ -71,7 +88,7 @@ describe('问水诀搜索剪枝基础', () => {
     const optimal = 穷举剩余伤害(state, Object.keys(damages), damages)
     const upperBound = 计算问水乐观上界({ 状态: state, 已累积伤害: 0, 最大理论每帧伤害: 125 })
 
-    expect(optimal).toBe(250)
+    expect(optimal).toBe(225)
     expect(upperBound).toBeGreaterThanOrEqual(optimal)
   })
 
@@ -86,7 +103,7 @@ describe('问水诀搜索剪枝基础', () => {
     expect(result.成功).toBe(true)
     if (!result.成功) return
     expect(result.来源).toBe('贪心回退')
-    expect(result.回退原因).toBe('AY3 鹤归孤山: 姿态不满足技能要求')
+    expect(result.回退原因).toBe('AY3 叠1-鹤归孤山: 鹤归孤山: 姿态不满足技能要求')
     expect(result.动作序列.length).toBeGreaterThan(0)
     expect(new Set(result.动作序列)).toEqual(new Set(['听雷-轻']))
     expect(重放动作(initial, result.动作序列)).toEqual({
@@ -146,7 +163,8 @@ describe('问水诀搜索剪枝基础', () => {
 
     expect(result).toEqual({
       成功: false,
-      失败原因: 'Excel 基线失败且贪心基线没有可执行动作: AY3 鹤归孤山: 姿态不满足技能要求',
+      失败原因:
+        'Excel 基线失败且贪心基线没有可执行动作: AY3 叠1-鹤归孤山: 鹤归孤山: 姿态不满足技能要求',
     })
   })
 })

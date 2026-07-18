@@ -1,4 +1,5 @@
 import { 问水待生效事件, 问水模拟状态 } from '../types'
+import { 获取当前剑气上限 } from './resources'
 
 const 获取事件数字 = (事件: 问水待生效事件, key: string, 默认值 = 0) => {
   const value = 事件.事件数据?.[key]
@@ -7,8 +8,9 @@ const 获取事件数字 = (事件: 问水待生效事件, key: string, 默认�
 
 const 获取伤害增益签名 = (state: 问水模拟状态, 事件: 问水待生效事件) => {
   if (!事件.命中时读取增益) return 事件.增益签名
+  const 内部状态 = new Set(['碧归', '叠锋意', '云景'])
   const 动态签名 = Object.keys(state.团队增益)
-    .concat(Object.keys(state.自身Buff).filter((名称) => 名称 !== '碧归'))
+    .concat(Object.keys(state.自身Buff).filter((名称) => !内部状态.has(名称)))
     .concat(事件.增益签名 || [])
   return Array.from(new Set(动态签名)).sort()
 }
@@ -26,13 +28,14 @@ const 结算伤害事件 = (state: 问水模拟状态, 事件: 问水待生效�
       技能等级: 获取事件数字(事件, '技能等级') || undefined,
       增益签名: 获取伤害增益签名(state, 事件),
       快照签名: 事件.快照签名,
+      权重: 获取事件数字(事件, '施放权重', 1),
     }),
   }
 }
 
 const 结算资源事件 = (state: 问水模拟状态, 事件: 问水待生效事件): 问水模拟状态 => ({
   ...state,
-  剑气: Math.max(0, Math.min(100, state.剑气 + 获取事件数字(事件, '剑气变化'))),
+  剑气: Math.max(0, Math.min(获取当前剑气上限(state), state.剑气 + 获取事件数字(事件, '剑气变化'))),
 })
 
 const 结算Buff事件 = (state: 问水模拟状态, 事件: 问水待生效事件): 问水模拟状态 => {

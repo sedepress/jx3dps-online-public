@@ -1,6 +1,6 @@
 import { 聚合问水策略 } from '../damage/aggregate-policy'
 import { 计算问水聚合期望伤害, 问水伤害表项 } from '../damage/build-damage-table'
-import { 执行动作 } from '../simulator/engine'
+import { 动作当前可执行, 执行动作 } from '../simulator/engine'
 import {
   压缩已结算伤害,
   合并可观察分支,
@@ -10,6 +10,7 @@ import {
   执行断潮条件规则,
 } from '../simulator/stochastic'
 import { 问水动作上下文, 问水模拟状态 } from '../types'
+import { 推进到帧 } from '../simulator/time'
 import { 获取问水状态键 } from './state-key'
 import { 计算问水乐观上界 } from './upper-bound'
 
@@ -24,6 +25,8 @@ export interface 问水搜索配置 {
   条件动作?: 问水搜索条件规则[]
   动作上下文?: 问水动作上下文
   触发断潮技能?: string[]
+  自动施放断潮?: boolean
+  断潮固定触发率?: number
   会心率?: number
   会心率映射?: Record<string, number>
   伤害表: 问水伤害表项[]
@@ -51,6 +54,7 @@ type 问水搜索结果 =
 export type 问水策略动作 =
   | { 类型: '主技能'; 技能名称: string }
   | { 类型: '条件规则'; 规则: 问水搜索条件规则 }
+  | { 类型: '等待' }
 
 interface 执行策略动作参数 {
   config: 问水搜索配置
@@ -115,16 +119,33 @@ const 创建候选 = (
   }
 }
 
-const 获取技能会心率 = (config: 问水搜索配置, skill: string) =>
-  config.会心率映射?.[skill] ?? config.会心率 ?? 0
+const 获取断潮触发率 = (config: 问水搜索配置, skill: string, state: 问水模拟状态) => {
+  const 会心率 = config.会心率映射?.[skill] ?? config.会心率 ?? 0
+  const 叠锋意层数 = state.自身Buff.叠锋意?.层数 || 0
+  return Math.min(1, Math.max(0, 会心率 + (config.断潮固定触发率 || 0) + 叠锋意层数 * 0.1))
+}
+
+const 应用自动断潮 = (branches: 问水概率分支[], config: 问水搜索配置, 触发技能: string) => {
+  if (!config.自动施放断潮) return branches
+  return branches.map((branch) => {
+    const 施放权重 = 获取断潮触发率(config, 触发技能, branch.状态)
+    const result = 执行断潮条件规则(
+      { ...branch.状态, 断潮可用: true },
+      { 技能名称: '断潮' },
+      config.动作上下文,
+      施放权重,
+    )
+    return result.成功 ? { ...branch, 状态: result.状态 } : branch
+  })
+}
 
 const 执行主技能 = (branch: 问水概率分支, skill: string, config: 问水搜索配置) => {
   const result = 执行动作(branch.状态, skill, config.动作上下文)
   if (!result.成功) return undefined
   const next = 压缩已结算伤害({ ...branch, 状态: result.状态 })
-  return config.触发断潮技能?.includes(skill)
-    ? 处理断潮触发(next, 获取技能会心率(config, skill))
-    : [next]
+  if (!config.触发断潮技能?.includes(skill)) return [next]
+  if (config.自动施放断潮) return 应用自动断潮([next], config, skill)
+  return 处理断潮触发(next, 获取断潮触发率(config, skill, branch.状态))
 }
 
 const 执行条件动作 = (branch: 问水概率分支, rule: 问水搜索条件规则, config: 问水搜索配置) => {
@@ -132,9 +153,31 @@ const 执行条件动作 = (branch: 问水概率分支, rule: 问水搜索条件
   const result = 执行断潮条件规则(branch.状态, rule, config.动作上下文)
   if (!result.成功) return undefined
   const next = 压缩已结算伤害({ ...branch, 状态: result.状态 })
-  return action && config.触发断潮技能?.includes(action)
-    ? 处理断潮触发(next, 获取技能会心率(config, action))
-    : [next]
+  if (!action || !config.触发断潮技能?.includes(action)) return [next]
+  if (config.自动施放断潮) return 应用自动断潮([next], config, action)
+  return 处理断潮触发(next, 获取断潮触发率(config, action, branch.状态))
+}
+
+const 获取下一等待帧 = (state: 问水模拟状态) => {
+  const buffFrames = Object.values(state.自身Buff)
+    .concat(Object.values(state.目标Buff), Object.values(state.团队增益))
+    .map((buff) => buff.结束帧)
+  const frames = [
+    state.GCD.公共,
+    ...Object.values(state.技能CD),
+    ...Object.values(state.技能充能).flatMap((item) => item.充能结束帧),
+    ...state.待生效事件.map((event) => event.生效帧),
+    ...buffFrames,
+  ]
+  return frames
+    .filter((frame) => frame > state.当前帧 && frame <= state.结束帧)
+    .sort((a, b) => a - b)[0]
+}
+
+const 执行等待 = (branch: 问水概率分支) => {
+  const 目标帧 = 获取下一等待帧(branch.状态)
+  if (目标帧 === undefined) return undefined
+  return [压缩已结算伤害({ ...branch, 状态: 推进到帧(branch.状态, 目标帧) })]
 }
 
 const 执行策略动作 = (
@@ -148,7 +191,9 @@ const 执行策略动作 = (
     const next =
       action.类型 === '主技能'
         ? 执行主技能(branch, action.技能名称, config)
-        : 执行条件动作(branch, action.规则, config)
+        : action.类型 === '条件规则'
+          ? 执行条件动作(branch, action.规则, config)
+          : 执行等待(branch)
     if (!next) return undefined
     branches.push(...next)
   }
@@ -167,10 +212,14 @@ const 执行策略动作 = (
   )
 }
 
-const 获取策略动作 = (config: 问水搜索配置): 问水策略动作[] =>
+const 获取策略动作 = (config: 问水搜索配置, candidate: 问水搜索候选): 问水策略动作[] =>
   config.主技能
+    .filter((技能名称) =>
+      candidate.分支.every((branch) => 动作当前可执行(branch.状态, 技能名称, config.动作上下文)),
+    )
     .map((技能名称): 问水策略动作 => ({ 类型: '主技能', 技能名称 }))
     .concat((config.条件动作 || []).map((规则) => ({ 类型: '条件规则' as const, 规则 })))
+    .concat({ 类型: '等待' })
 
 export const 比较问水搜索候选 = (left: 问水搜索候选, right: 问水搜索候选) =>
   right.期望总伤 - left.期望总伤 ||
@@ -199,7 +248,7 @@ export const 扩展问水搜索候选 = (
   let order = 参数.稳定序号
   let attempts = 0
   const candidates: 问水搜索候选[] = []
-  const actions = 获取策略动作(config)
+  const actions = 获取策略动作(config, candidate)
   let index = 参数.起始动作索引 || 0
   for (; index < actions.length; index += 1) {
     if (attempts >= 参数.最多尝试) break

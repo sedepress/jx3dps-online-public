@@ -9,6 +9,7 @@ function SaveProject() {
   const [自定义方案保存弹窗, 设置自定义方案保存弹窗] = useState<boolean>(false)
   const 装备信息 = useAppSelector((state) => state.data.装备信息)
   const 当前计算循环名称 = useAppSelector((state) => state.data.当前计算循环名称)
+  const 当前战斗时间 = useAppSelector((state) => state.data.当前战斗时间)
   const 当前奇穴信息 = useAppSelector((state) => state.data.当前奇穴信息)
   const 当前秘籍信息 = useAppSelector((state) => state.data.当前秘籍信息)
   const 增益启用 = useAppSelector((state) => state.data.增益启用)
@@ -21,6 +22,7 @@ function SaveProject() {
       方案名称: 名称,
       装备信息,
       当前计算循环名称,
+      当前战斗时间,
       当前奇穴信息,
       当前秘籍信息,
       增益启用,

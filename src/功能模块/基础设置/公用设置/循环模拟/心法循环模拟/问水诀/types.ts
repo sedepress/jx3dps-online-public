@@ -25,6 +25,7 @@ export interface 问水伤害事件 {
   技能等级?: number
   增益签名?: string[]
   快照签名?: string[]
+  权重?: number
 }
 
 export interface 问水技能记录 {
@@ -33,6 +34,12 @@ export interface 问水技能记录 {
   命中帧: number
   结束帧: number
   是否条件动作?: boolean
+}
+
+export interface 问水技能充能状态 {
+  当前层数: number
+  最大层数: number
+  充能结束帧: number[]
 }
 
 export interface 问水模拟状态 {
@@ -48,6 +55,7 @@ export interface 问水模拟状态 {
   目标Buff: Record<string, 问水Buff状态>
   团队增益: Record<string, 问水Buff状态>
   技能CD: Record<string, number>
+  技能充能: Record<string, 问水技能充能状态>
   GCD: { 公共: number; 自身: Record<string, number> }
   待生效事件: 问水待生效事件[]
   伤害事件: 问水伤害事件[]

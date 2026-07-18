@@ -1,6 +1,6 @@
 import React from 'react'
 import { useAppDispatch, useAppSelector } from '@/hooks'
-import { App, Divider, Popover, Select, Tooltip } from 'antd'
+import { App, Popover, Select, Tooltip } from 'antd'
 import { 更新方案数据 } from '@/store/data'
 import classnames from 'classnames'
 import useCycle from '@/hooks/use-cycle'
@@ -13,12 +13,27 @@ import classNames from 'classnames'
 import './index.css'
 
 const { 装备数据 } = 获取当前数据()
+const 战斗时间选项 = [
+  '210s',
+  '220s',
+  '240s',
+  '300s',
+  '310s',
+  '360s',
+  '420s',
+  '480s',
+  '540s',
+  '600s',
+  '∞',
+]
+const 默认战斗时间选项 = '220s'
 
 function 循环选择(props) {
-  const { className, 不提示循环, 不更新秒伤 } = props
+  const { className, 不提示循环, 不更新秒伤, 隐藏战斗时间 } = props
   const { modal } = App.useApp()
   const dispatch = useAppDispatch()
   const 当前计算循环名称 = useAppSelector((state) => state?.data?.当前计算循环名称)
+  const 当前战斗时间 = useAppSelector((state) => state?.data?.当前战斗时间)
   const 装备信息 = useAppSelector((state) => state?.data?.装备信息)
 
   const { 全部循环 = [], 当前循环信息, 计算循环详情 } = useCycle()
@@ -102,28 +117,56 @@ function 循环选择(props) {
     return 循环默认秘籍
   }
 
+  const 获取默认展示战斗时间 = () => {
+    const 循环战斗时间 = 计算循环详情?.技能数量计算时间 || 计算循环详情?.战斗时间
+    const 选项值 = 循环战斗时间 ? `${Math.round(循环战斗时间)}s` : 默认战斗时间选项
+    return 战斗时间选项.includes(选项值) ? 选项值 : 默认战斗时间选项
+  }
+
+  const 判断战斗时间是否可选 = (选项) => {
+    if (选项 === 获取默认展示战斗时间()) {
+      return true
+    }
+    return !!计算循环详情?.支持战斗时间覆盖
+  }
+
+  const 获取战斗时间禁用说明 = () => {
+    return '该战斗时间需要对应技能数量数据，当前循环暂未接入'
+  }
+
+  const 切换战斗时间 = (val) => {
+    const 保存值 = val === 获取默认展示战斗时间() ? undefined : val
+    dispatch(更新方案数据({ 属性: '当前战斗时间', 数据: 保存值 }))
+    if (!不更新秒伤) {
+      dispatch(触发秒伤计算({ 是否更新显示计算结果: true }))
+    }
+  }
+
   const cls = classNames('common-item', className)
+  const 展示战斗时间 =
+    当前战斗时间 && 判断战斗时间是否可选(当前战斗时间) ? 当前战斗时间 : 获取默认展示战斗时间()
 
   return (
-    <div className={cls}>
-      <h1 className='common-label'>循环</h1>
-      <div className='common-content'>
-        <Select
-          value={展示循环名称 || 当前计算循环名称}
-          className='cycle-select'
-          onChange={(v) => {
-            if (不提示循环) {
-              切换循环(v)
-            } else {
-              切换循环前校验(v)
-            }
-          }}
-          optionFilterProp='label'
-          popupMatchSelectWidth={300}
-          dropdownRender={(menu) => (
-            <>
-              {menu}
-              {/* <Divider style={{ margin: '8px 0' }} />
+    <>
+      <div className={cls}>
+        <h1 className='common-label'>循环</h1>
+        <div className='common-content'>
+          <Select
+            value={展示循环名称 || 当前计算循环名称}
+            className='cycle-select'
+            onChange={(v) => {
+              if (不提示循环) {
+                切换循环(v)
+              } else {
+                切换循环前校验(v)
+              }
+            }}
+            optionFilterProp='label'
+            popupMatchSelectWidth={300}
+            dropdownRender={(menu) => (
+              <>
+                {menu}
+                {/* <Divider style={{ margin: '8px 0' }} />
               <div className='cycle-select-cycle-out'>
                 <Tooltip title='点击访问魔盒教程，定制自己的循环计算吧！'>
                   <a target='_blank' href={'https://www.jx3box.com/bps/95296'} rel='noreferrer'>
@@ -131,84 +174,113 @@ function 循环选择(props) {
                   </a>
                 </Tooltip>
               </div> */}
-            </>
-          )}
-        >
-          {全部循环.map((item) => {
-            const cls = classnames(
-              'cycle-select-item-tag',
-              item.标记 === '紫武' ? 'cycle-select-item-tag-purple' : '',
-              item.标记 === '橙武' ? 'cycle-select-item-tag-orange' : '',
-              item.标记 === '特效' ? 'cycle-select-item-tag-texiao' : '',
-              item.标记 === '助手' ? 'cycle-select-item-tag-green' : '',
-            )
+              </>
+            )}
+          >
+            {全部循环.map((item) => {
+              const cls = classnames(
+                'cycle-select-item-tag',
+                item.标记 === '紫武' ? 'cycle-select-item-tag-purple' : '',
+                item.标记 === '橙武' ? 'cycle-select-item-tag-orange' : '',
+                item.标记 === '特效' ? 'cycle-select-item-tag-texiao' : '',
+                item.标记 === '助手' ? 'cycle-select-item-tag-green' : '',
+              )
 
-            const 快照计算列表 = 根据循环判断快照计算列表(item?.循环详情?.[0]?.技能详情 || [])
-            return (
-              <Select.Option value={item?.名称} key={item.名称} label={item.标题 || item.名称}>
-                <Popover
-                  placement='right'
-                  zIndex={2000}
-                  title='说明'
-                  open={item.提供者 || item.备注 ? undefined : false}
-                  content={
-                    item.提供者 || item.备注 || 快照计算列表?.length ? (
-                      <div className='cycle-select-popover-content'>
-                        <>
-                          {item.提供者 !== '模拟' ? (
-                            <p>
-                              该循环计算数据由
-                              <span className='cycle-select-provider'> {item.提供者} </span>
-                              提供
-                            </p>
-                          ) : (
-                            <p>
-                              该循环计算数据由
-                              <span className='cycle-select-provider'> 模拟器 </span>生成
-                            </p>
-                          )}
-                          <p dangerouslySetInnerHTML={{ __html: item?.备注 as any }} />
-                        </>
-                        {快照计算列表?.length ? (
-                          <div>
-                            以下增益支持快照计算
+              const 快照计算列表 = 根据循环判断快照计算列表(item?.循环详情?.[0]?.技能详情 || [])
+              return (
+                <Select.Option value={item?.名称} key={item.名称} label={item.标题 || item.名称}>
+                  <Popover
+                    placement='right'
+                    zIndex={2000}
+                    title='说明'
+                    open={item.提供者 || item.备注 ? undefined : false}
+                    content={
+                      item.提供者 || item.备注 || 快照计算列表?.length ? (
+                        <div className='cycle-select-popover-content'>
+                          <>
+                            {item.提供者 !== '模拟' ? (
+                              <p>
+                                该循环计算数据由
+                                <span className='cycle-select-provider'> {item.提供者} </span>
+                                提供
+                              </p>
+                            ) : (
+                              <p>
+                                该循环计算数据由
+                                <span className='cycle-select-provider'> 模拟器 </span>生成
+                              </p>
+                            )}
+                            <p dangerouslySetInnerHTML={{ __html: item?.备注 as any }} />
+                          </>
+                          {快照计算列表?.length ? (
                             <div>
-                              {快照计算列表?.map((data, index) => {
-                                return (
-                                  <span
-                                    className='cycle-select-provider'
-                                    key={`增益快照计算${data}`}
-                                  >
-                                    {data?.replace('_快照', '')}
-                                    {index < (快照计算列表?.length || 0) - 1 ? '｜' : ''}
-                                  </span>
-                                )
-                              })}
+                              以下增益支持快照计算
+                              <div>
+                                {快照计算列表?.map((data, index) => {
+                                  return (
+                                    <span
+                                      className='cycle-select-provider'
+                                      key={`增益快照计算${data}`}
+                                    >
+                                      {data?.replace('_快照', '')}
+                                      {index < (快照计算列表?.length || 0) - 1 ? '｜' : ''}
+                                    </span>
+                                  )
+                                })}
+                              </div>
                             </div>
-                          </div>
+                          ) : null}
+                        </div>
+                      ) : (
+                        <div>该循环无特殊说明</div>
+                      )
+                    }
+                  >
+                    <div className='cycle-select-item'>
+                      <div dangerouslySetInnerHTML={{ __html: item.标题 || item.名称 }} />
+                      <div>
+                        {item.提供者 ? (
+                          <span className='cycle-select-provider'>{item.提供者}</span>
                         ) : null}
+                        <span className={cls}>{item.标记}</span>
                       </div>
-                    ) : (
-                      <div>该循环无特殊说明</div>
-                    )
-                  }
-                >
-                  <div className='cycle-select-item'>
-                    <div dangerouslySetInnerHTML={{ __html: item.标题 || item.名称 }} />
-                    <div>
-                      {item.提供者 ? (
-                        <span className='cycle-select-provider'>{item.提供者}</span>
-                      ) : null}
-                      <span className={cls}>{item.标记}</span>
                     </div>
-                  </div>
-                </Popover>
-              </Select.Option>
-            )
-          })}
-        </Select>
+                  </Popover>
+                </Select.Option>
+              )
+            })}
+          </Select>
+        </div>
       </div>
-    </div>
+      {!隐藏战斗时间 ? (
+        <div className={cls}>
+          <h1 className='common-label'>时长</h1>
+          <div className='common-content'>
+            <Select
+              value={展示战斗时间}
+              className='cycle-select'
+              onChange={切换战斗时间}
+              popupMatchSelectWidth={140}
+            >
+              {战斗时间选项.map((item) => {
+                const 暂不支持 = !判断战斗时间是否可选(item)
+                return (
+                  <Select.Option value={item} key={item} label={item} disabled={暂不支持}>
+                    {暂不支持 ? (
+                      <Tooltip title={获取战斗时间禁用说明()}>
+                        <span>{item}</span>
+                      </Tooltip>
+                    ) : (
+                      item
+                    )}
+                  </Select.Option>
+                )
+              })}
+            </Select>
+          </div>
+        </div>
+      ) : null}
+    </>
   )
 }
 

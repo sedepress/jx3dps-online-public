@@ -8,16 +8,21 @@ const 初始进度 = { 扩展节点数: 0, 扩展预算: 0, 当前最佳伤害: 
 export const 校验问水战斗时间 = (value: number | null) =>
   value !== null && Number.isInteger(value) && value >= 1 && value <= 600
 
-const 获取Worker参数 = ({ 战斗时间: _战斗时间, 配置指纹: _配置指纹, ...params }: 问水搜索任务) =>
-  params
+const 获取Worker参数 = ({
+  战斗时间: _战斗时间,
+  配置指纹: _配置指纹,
+  当前循环基线: _当前循环基线,
+  ...params
+}: 问水搜索任务) => params
 
-const use搜索状态 = (初始战斗时间: number) => {
+const use搜索状态 = (初始战斗时间: number, 初始比较DPS: number) => {
   const [战斗时间, 设置战斗时间] = useState<number | null>(初始战斗时间)
   const [运行中, 设置运行中] = useState(false)
   const [进度, 设置进度] = useState(初始进度)
   const [结果, 设置结果] = useState<问水优化展示结果>()
   const [错误, 设置错误] = useState<string>()
   const [已用毫秒, 设置已用毫秒] = useState(0)
+  const [比较基线DPS, 设置比较基线DPS] = useState(初始比较DPS)
   const clientRef = useRef<问水搜索客户端>()
   const taskRef = useRef<{ id: string; data: 问水搜索任务; startedAt: number }>()
   useEffect(() => {
@@ -40,6 +45,8 @@ const use搜索状态 = (初始战斗时间: number) => {
     设置错误,
     已用毫秒,
     设置已用毫秒,
+    比较基线DPS,
+    设置比较基线DPS,
     clientRef,
     taskRef,
   }
@@ -82,6 +89,7 @@ const 开始搜索 = (props: OptimalSequenceModalProps, state: 搜索状态) => 
     state.设置结果(undefined)
     state.设置进度({ ...初始进度, 扩展预算: task.搜索参数.扩展预算 })
     state.设置已用毫秒(0)
+    state.设置比较基线DPS(task.当前循环基线?.DPS || props.当前DPS)
     state.设置运行中(true)
     const id = 获取客户端(props, state).开始(获取Worker参数(task), {
       进度: (message) => state.设置进度(message),
@@ -99,7 +107,7 @@ const 开始搜索 = (props: OptimalSequenceModalProps, state: 搜索状态) => 
 }
 
 export const use问水最优序列 = (props: OptimalSequenceModalProps) => {
-  const state = use搜索状态(props.初始战斗时间)
+  const state = use搜索状态(props.初始战斗时间, props.当前DPS)
   useEffect(() => () => state.clientRef.current?.销毁(), [])
   const 配置已过期 =
     !!state.结果 &&
@@ -114,7 +122,7 @@ export const use问水最优序列 = (props: OptimalSequenceModalProps) => {
       props.onClose()
     },
     应用当前结果: () => {
-      if (!state.结果 || 配置已过期) return
+      if (!state.结果 || 配置已过期 || state.结果.是否优于当前循环 === false) return
       props.应用结果(state.结果)
       props.onClose()
     },

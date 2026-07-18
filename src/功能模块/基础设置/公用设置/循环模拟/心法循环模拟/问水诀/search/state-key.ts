@@ -1,6 +1,8 @@
 import { 问水Buff状态, 问水待生效事件, 问水模拟状态 } from '../types'
 import { 比较问水事件 } from '../simulator/events'
 
+const 四季累计技能 = ['夕照雷峰', '云飞玉皇', '云景·云飞玉皇']
+
 const 排序记录 = <T>(record: Record<string, T>) =>
   Object.fromEntries(Object.entries(record).sort(([left], [right]) => left.localeCompare(right)))
 
@@ -43,7 +45,9 @@ export const 获取问水状态键 = (state: 问水模拟状态) =>
     目标Buff: 标准化Buff集合(state.目标Buff),
     团队增益: 标准化Buff集合(state.团队增益),
     技能CD: 排序记录(state.技能CD),
+    技能充能: 排序记录(state.技能充能),
     GCD: { 公共: state.GCD.公共, 自身: 排序记录(state.GCD.自身) },
     待生效事件: 标准化待生效事件(state.待生效事件),
+    四季累计余数: state.技能记录.filter((item) => 四季累计技能.includes(item.技能名称)).length % 2,
     技能记录状态: state.待生效事件.length ? state.技能记录.length : state.技能记录.length > 0,
   })

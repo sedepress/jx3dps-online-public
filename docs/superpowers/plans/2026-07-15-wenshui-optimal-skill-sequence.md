@@ -8,6 +8,8 @@
 
 **Tech Stack:** React 18、TypeScript、Redux Toolkit、Ant Design、Webpack Web Worker、Jest、Testing Library、SheetJS `xlsx`
 
+> 2026-07-17 纠偏：原 Task 4-6 的“已建模”结论不成立。当前已确认 Excel `AY/BI` 模板能提供 token、造化分档和普通攻击次数公式，但没有可验证的三柴/四季回剑规则，因此不能作为合法动作轴。后续实现以 `docs/superpowers/specs/2026-07-17-wenshui-optimizer-rule-correction-design.md` 为准，搜索下界改为当前正式循环的精确 DPS；模板重放只用于结构化暴露缺失语义。
+
 ---
 
 ## 实施约束
@@ -34,7 +36,8 @@ src/功能模块/基础设置/公用设置/循环模拟/
     types.ts
     rules/
       constants.ts
-      excel-baseline.generated.json
+      excel-baseline-*.generated.ts
+      excel-baseline-manifest.generated.json
       skill-definitions.ts
     simulator/
       create-state.ts
@@ -79,7 +82,8 @@ src/功能模块/基础设置/公用设置/循环模拟/
 **Files:**
 
 - Create: `scripts/extract-wenshui-sequence-baseline.mjs`
-- Create: `src/功能模块/基础设置/公用设置/循环模拟/心法循环模拟/问水诀/rules/excel-baseline.generated.json`
+- Create: `src/功能模块/基础设置/公用设置/循环模拟/心法循环模拟/问水诀/rules/excel-baseline-*.generated.ts`
+- Create: `src/功能模块/基础设置/公用设置/循环模拟/心法循环模拟/问水诀/rules/excel-baseline-manifest.generated.json`
 - Create: `src/功能模块/基础设置/公用设置/循环模拟/心法循环模拟/问水诀/rules/constants.ts`
 - Test: `src/功能模块/基础设置/公用设置/循环模拟/心法循环模拟/问水诀/rules/constants.test.ts`
 
@@ -111,7 +115,7 @@ Expected: FAIL，提示找不到 `constants` 或导出。
 - `技能数计算!BI:BJ`：叠锋意碧归橙武序列
 - `循环手法!B:M`：短轴人工可读模板，用于校验技能 token 映射
 
-输出只包含结构化克隆安全的 JSON：
+输出使用每个文件最多 200 个元组的只读 TypeScript 分块，确保生成文件不超过 300 行；manifest 使用结构化 JSON：
 
 ```ts
 interface Excel基线动作 {
@@ -123,7 +127,7 @@ interface Excel基线动作 {
 }
 ```
 
-未知 token、空洞序号、重复序号或来源列错配立即让脚本失败，不静默跳过。测试同时对生成 JSON 做稳定快照，防止脚本只生成“非空但无序”的数据。
+未知 token、空洞序号、重复序号或来源列错配立即让脚本失败，不静默跳过。测试同时校验生成分块的关键首尾动作、来源和连续序号，防止脚本只生成“非空但无序”的数据。
 
 - [ ] **Step 4: 生成基线并实现常量入口**
 
@@ -371,7 +375,7 @@ git commit -m "feat: model wenshui heavy sword effects" --only src/功能模块/
 - Test: `src/功能模块/基础设置/公用设置/循环模拟/心法循环模拟/问水诀/simulator/stochastic.test.ts`
 - Test: `src/功能模块/基础设置/公用设置/循环模拟/心法循环模拟/问水诀/simulator/baseline-execution.test.ts`
 
-- [ ] **Step 1: 写概率守恒失败测试**
+- [x] **Step 1: 写概率守恒失败测试**
 
 ```ts
 it('会心触发将状态拆成断潮可用与不可用且总概率为 1', () => {
@@ -381,29 +385,29 @@ it('会心触发将状态拆成断潮可用与不可用且总概率为 1', () =>
 })
 ```
 
-- [ ] **Step 2: 写条件动作失败测试**
+- [x] **Step 2: 写条件动作失败测试**
 
 验证触发分支插入断潮并推进时间，未触发分支执行回退动作；两个分支后续可以依据玩家可观察状态选择不同动作。
 
-- [ ] **Step 3: 运行测试确认失败**
+- [x] **Step 3: 运行测试确认失败**
 
 Run: `npx jest --runTestsByPath src/功能模块/基础设置/公用设置/循环模拟/心法循环模拟/问水诀/simulator/stochastic.test.ts --watchAll=false --runInBand`
 
-- [ ] **Step 4: 实现概率分支、策略节点和安全合并**
+- [x] **Step 4: 实现概率分支、策略节点和安全合并**
 
 只合并未来决策等价的可观察状态；合并时分别累计概率与概率加权伤害，禁止平均剑气、CD 或 Buff 层数。
 
-- [ ] **Step 5: 运行测试和动态断潮回归测试**
+- [x] **Step 5: 运行测试和动态断潮回归测试**
 
 Run: `npx jest --runTestsByPath src/功能模块/基础设置/公用设置/循环模拟/心法循环模拟/问水诀/simulator/stochastic.test.ts src/心法模块/心法/问水诀/问水诀dps.test.ts --watchAll=false --runInBand -t "断潮"`
 
-- [ ] **Step 6: 立即验证 Excel 基线可以被完整状态机逐步执行**
+- [x] **Step 6: 逐步执行 Excel 模板并结构化暴露首个缺失语义**
 
-`baseline-execution.test.ts` 读取 Task 1 生成的斩岳/碧归基线，逐 token 映射并执行。未知 token、非法姿态、资源不足或无法解释的等待必须明确失败，不能拖到搜索剪枝任务才发现。
+`baseline-execution.test.ts` 读取 Task 1 生成的斩岳/碧归模板，逐 token 映射并执行。未知 token、非法姿态、资源不足或无法解释的等待必须明确失败；不得通过猜测普通攻击回剑常量强行让模板通过。
 
 Run: `npx jest --runTestsByPath src/功能模块/基础设置/公用设置/循环模拟/心法循环模拟/问水诀/simulator/baseline-execution.test.ts --watchAll=false --runInBand`
 
-- [ ] **Step 7: 路径限定提交**
+- [x] **Step 7: 路径限定提交**
 
 ```bash
 git add -f src/功能模块/基础设置/公用设置/循环模拟/心法循环模拟/问水诀/simulator/stochastic.ts src/功能模块/基础设置/公用设置/循环模拟/心法循环模拟/问水诀/simulator/stochastic.test.ts src/功能模块/基础设置/公用设置/循环模拟/心法循环模拟/问水诀/simulator/baseline-execution.test.ts
@@ -420,31 +424,31 @@ git commit -m "feat: model conditional duanchao branches" --only src/功能模�
 - Test: `src/功能模块/基础设置/公用设置/循环模拟/心法循环模拟/问水诀/damage/aggregate-policy.test.ts`
 - Test: `src/功能模块/基础设置/公用设置/循环模拟/心法循环模拟/问水诀/damage/rerank-candidates.test.ts`
 
-- [ ] **Step 1: 写概率聚合失败测试**
+- [x] **Step 1: 写概率聚合失败测试**
 
 验证成功率 `0.37` 的断潮分支最终聚合为 `技能数量: 0.37`，并按技能名称与增益签名分别聚合。
 
-- [ ] **Step 2: 写现有 DPS 内核一致性失败测试**
+- [x] **Step 2: 写现有 DPS 内核一致性失败测试**
 
 构造一个短序列，将伤害事件聚合后调用现有 `秒伤计算` 覆盖参数，断言技能总伤和模拟事件期望总伤一致。
 
-- [ ] **Step 3: 运行测试确认失败**
+- [x] **Step 3: 运行测试确认失败**
 
 Run: `npx jest --runTestsByPath src/功能模块/基础设置/公用设置/循环模拟/心法循环模拟/问水诀/damage/aggregate-policy.test.ts src/功能模块/基础设置/公用设置/循环模拟/心法循环模拟/问水诀/damage/rerank-candidates.test.ts --watchAll=false --runInBand`
 
-- [ ] **Step 4: 实现伤害快照、伤害表和聚合器**
+- [x] **Step 4: 实现伤害快照、伤害表和聚合器**
 
 先在 `damage/context.ts` 构建结构化克隆安全的伤害快照：复用当前装备、目标、奇穴、秘籍、团队增益和快照列表的现有工具，但不把 Redux `dispatch`、React 对象或 `Map` 放入 Worker DTO。伤害表通过当前技能系数、装备、奇穴、秘籍和团队增益生成。使用 `循环秒伤计算` 的 `计算结果技能列表` 提取目标技能单次伤害，忽略同次计算追加的顺序无关装备技能。
 
-- [ ] **Step 5: 实现最终候选精确重排**
+- [x] **Step 5: 实现最终候选精确重排**
 
 只对 Beam Search 的有限 Top K 候选执行完整 DPS 内核复算，最终结果以复算 DPS 排序。
 
-- [ ] **Step 6: 运行测试**
+- [x] **Step 6: 运行测试**
 
 Run: `npx jest --runTestsByPath src/功能模块/基础设置/公用设置/循环模拟/心法循环模拟/问水诀/damage --watchAll=false --runInBand`
 
-- [ ] **Step 7: 提交新增文件；共享计算文件只精确暂存新增 hunks**
+- [x] **Step 7: 提交新增文件；共享计算文件只精确暂存新增 hunks**
 
 ```bash
 git add -f src/功能模块/基础设置/公用设置/循环模拟/心法循环模拟/问水诀/damage
@@ -462,27 +466,27 @@ git commit -m "feat: evaluate wenshui policy damage" --only src/功能模块/基
 - Create: `src/功能模块/基础设置/公用设置/循环模拟/心法循环模拟/问水诀/search/baseline.ts`
 - Test: `src/功能模块/基础设置/公用设置/循环模拟/心法循环模拟/问水诀/search/pruning.test.ts`
 
-- [ ] **Step 1: 写状态键失败测试**
+- [x] **Step 1: 写状态键失败测试**
 
 未来决策等价的状态生成相同键；剑气、姿态、关键 Buff、CD、断潮可用状态任一不同则键不同。
 
-- [ ] **Step 2: 写上界安全性失败测试**
+- [x] **Step 2: 写上界安全性失败测试**
 
 短时长穷举的真实最优剩余伤害不得高于 `计算乐观上界`。上界可以宽松，但不能低估。
 
-- [ ] **Step 3: 写基线合法性失败测试**
+- [x] **Step 3: 写基线合法性失败测试**
 
 Excel token 必须经过模拟器逐步执行；无法执行的 Excel 基线不得进入候选，只回退到合法贪心基线并记录原因。
 
-- [ ] **Step 4: 运行测试确认失败**
+- [x] **Step 4: 运行测试确认失败**
 
 Run: `npx jest --runTestsByPath src/功能模块/基础设置/公用设置/循环模拟/心法循环模拟/问水诀/search/pruning.test.ts --watchAll=false --runInBand`
 
-- [ ] **Step 5: 实现稳定状态键、宽松上界和基线构造**
+- [x] **Step 5: 实现稳定状态键、宽松上界和基线构造**
 
 第一版上界使用“剩余帧 × 所有当前可达技能中的最大理论每帧伤害”，忽略资源和 CD，因此保证不低估。
 
-- [ ] **Step 6: 运行测试并提交**
+- [x] **Step 6: 运行测试并提交**
 
 Run: `npx jest --runTestsByPath src/功能模块/基础设置/公用设置/循环模拟/心法循环模拟/问水诀/search/pruning.test.ts --watchAll=false --runInBand`
 
@@ -499,27 +503,27 @@ git commit -m "feat: add safe wenshui search pruning" --only src/功能模块/�
 - Create: `src/功能模块/基础设置/公用设置/循环模拟/心法循环模拟/问水诀/search/beam-search.ts`
 - Test: `src/功能模块/基础设置/公用设置/循环模拟/心法循环模拟/问水诀/search/beam-search.test.ts`
 
-- [ ] **Step 1: 写短时长最优性失败测试**
+- [x] **Step 1: 写短时长最优性失败测试**
 
 对 `1-10` 秒的小技能集分别计算穷举策略和 Beam Search，断言期望总伤、主序列和条件规则相同。
 
-- [ ] **Step 2: 写确定性与基线失败测试**
+- [x] **Step 2: 写确定性与基线失败测试**
 
 同一输入和扩展预算运行两次结果完全一致；搜索结果不低于合法贪心基线和可比较的有序 Excel 基线。
 
-- [ ] **Step 3: 运行测试确认失败**
+- [x] **Step 3: 运行测试确认失败**
 
 Run: `npx jest --runTestsByPath src/功能模块/基础设置/公用设置/循环模拟/心法循环模拟/问水诀/search/beam-search.test.ts --watchAll=false --runInBand`
 
-- [ ] **Step 4: 实现分组 Beam、分支限界和固定扩展预算**
+- [x] **Step 4: 实现分组 Beam、分支限界和固定扩展预算**
 
 每轮按姿态、剑气区间和关键 Buff 状态分桶；桶内稳定排序。搜索器不直接读取 `Date.now()`，只消费剩余扩展预算。
 
-- [ ] **Step 5: 运行测试并记录搜索统计**
+- [x] **Step 5: 运行测试并记录搜索统计**
 
 Run: `npx jest --runTestsByPath src/功能模块/基础设置/公用设置/循环模拟/心法循环模拟/问水诀/search --watchAll=false --runInBand`
 
-- [ ] **Step 6: 路径限定提交**
+- [x] **Step 6: 路径限定提交**
 
 ```bash
 git add -f src/功能模块/基础设置/公用设置/循环模拟/心法循环模拟/问水诀/search
@@ -536,19 +540,19 @@ git commit -m "feat: search optimal wenshui policies" --only src/功能模块/�
 - Create: `src/功能模块/基础设置/公用设置/循环模拟/心法循环模拟/问水诀/worker/client.ts`
 - Test: `src/功能模块/基础设置/公用设置/循环模拟/心法循环模拟/问水诀/worker/client.test.ts`
 
-- [ ] **Step 1: 写 Worker 协议和取消失败测试**
+- [x] **Step 1: 写 Worker 协议和取消失败测试**
 
 测试任务 ID、进度消息、完成消息、取消后忽略旧结果和 Worker 异常清理。
 
-- [ ] **Step 2: 写分块 Runner 失败测试**
+- [x] **Step 2: 写分块 Runner 失败测试**
 
 每个 chunk 只执行固定扩展数并交还事件循环；取消、确定性预算完成和 60 秒紧急上限分别返回不同结束原因。
 
-- [ ] **Step 3: 运行测试确认失败**
+- [x] **Step 3: 运行测试确认失败**
 
 Run: `npx jest --runTestsByPath src/功能模块/基础设置/公用设置/循环模拟/心法循环模拟/问水诀/worker/client.test.ts --watchAll=false --runInBand`
 
-- [ ] **Step 4: 实现 Worker 和客户端**
+- [x] **Step 4: 实现 Worker 和客户端**
 
 客户端使用：
 
@@ -558,13 +562,13 @@ new Worker(new URL('./worker.ts', import.meta.url))
 
 Worker 通过 `setTimeout(..., 0)` 或等价调度逐块推进，使取消消息可以被处理。墙钟限制只在完整 chunk 边界检查。
 
-- [ ] **Step 5: 运行测试与构建**
+- [x] **Step 5: 运行测试与构建**
 
 Run: `npx jest --runTestsByPath src/功能模块/基础设置/公用设置/循环模拟/心法循环模拟/问水诀/worker/client.test.ts --watchAll=false --runInBand`
 
 Run: `npm run build`
 
-- [ ] **Step 6: 路径限定提交**
+- [x] **Step 6: 路径限定提交**
 
 ```bash
 git add -f src/功能模块/基础设置/公用设置/循环模拟/心法循环模拟/问水诀/search/runner.ts src/功能模块/基础设置/公用设置/循环模拟/心法循环模拟/问水诀/worker
@@ -580,27 +584,27 @@ git commit -m "feat: run wenshui search in worker" --only src/功能模块/基�
 - Test: `src/功能模块/基础设置/公用设置/循环模拟/心法循环模拟/问水诀/apply/apply-custom-cycle.test.ts`
 - Modify: `src/store/data/index.ts`
 
-- [ ] **Step 1: 写循环对象失败测试**
+- [x] **Step 1: 写循环对象失败测试**
 
 断言生成对象包含：名称、当前奇穴/秘籍、精确战斗时间、技能序列、条件规则、聚合技能详情、当前加速范围、当前延迟、配置指纹和优化信息。
 
-- [ ] **Step 2: 写应用原子性失败测试**
+- [x] **Step 2: 写应用原子性失败测试**
 
 应用前 Redux 和 localStorage 不变；应用时更新自定义循环列表、当前循环名、奇穴、秘籍并清空不适用的 `当前战斗时间`，最后只调度一次正式 DPS 计算。
 
-- [ ] **Step 3: 运行测试确认失败**
+- [x] **Step 3: 运行测试确认失败**
 
 Run: `npx jest --runTestsByPath src/功能模块/基础设置/公用设置/循环模拟/心法循环模拟/问水诀/apply/apply-custom-cycle.test.ts --watchAll=false --runInBand`
 
-- [ ] **Step 4: 实现构造和应用 thunk**
+- [x] **Step 4: 实现构造和应用 thunk**
 
 缓存映射在函数执行时动态读取 `获取当前数据()`。循环同名时更新旧结果，否则追加；不得依赖循环模拟弹窗的 `useEffect` 才持久化。
 
-- [ ] **Step 5: 运行测试和循环选择回归测试**
+- [x] **Step 5: 运行测试和循环选择回归测试**
 
 Run: `npx jest --runTestsByPath src/功能模块/基础设置/公用设置/循环模拟/心法循环模拟/问水诀/apply/apply-custom-cycle.test.ts src/心法模块/心法/问水诀/问水诀dps.test.ts --watchAll=false --runInBand -t "循环选择|自定义循环|战斗时间"`
 
-- [ ] **Step 6: 提交新增文件，延后共享 Store hunk**
+- [x] **Step 6: 提交新增文件，延后共享 Store hunk**
 
 ```bash
 git add -f src/功能模块/基础设置/公用设置/循环模拟/心法循环模拟/问水诀/apply
@@ -620,7 +624,7 @@ git commit -m "feat: apply optimized wenshui cycles" --only src/功能模块/基
 - Create: `src/功能模块/基础设置/公用设置/循环模拟/心法循环模拟/问水诀/components/SearchResult.tsx`
 - Test: `src/功能模块/基础设置/公用设置/循环模拟/心法循环模拟/问水诀/components/OptimalSequenceModal/index.test.tsx`
 
-- [ ] **Step 1: 写输入和生命周期失败测试**
+- [x] **Step 1: 写输入和生命周期失败测试**
 
 覆盖：
 
@@ -630,31 +634,31 @@ git commit -m "feat: apply optimized wenshui cycles" --only src/功能模块/基
 - 停止后保留当前最佳结果
 - 组件卸载时终止 Worker
 
-- [ ] **Step 2: 写结果与应用失败测试**
+- [x] **Step 2: 写结果与应用失败测试**
 
 覆盖技能序列/技能统计 Tabs、条件规则展示、提前结束标记、配置指纹过期阻止应用，以及应用成功后关闭弹窗。
 
-- [ ] **Step 3: 运行 React 测试确认失败**
+- [x] **Step 3: 运行 React 测试确认失败**
 
 Run: `npx jest --runTestsByPath src/功能模块/基础设置/公用设置/循环模拟/心法循环模拟/问水诀/components/OptimalSequenceModal/index.test.tsx --watchAll=false --runInBand`
 
-- [ ] **Step 4: 实现现有风格下的 Modal**
+- [x] **Step 4: 实现现有风格下的 Modal**
 
 使用 Ant Design `InputNumber`、`Progress`、`Tabs`、`Button` 和现有图标库。入口按钮替换当前禁用的“循环模拟”，不新增营销式页面或嵌套卡片。
 
-- [ ] **Step 5: 运行测试、构建并检查样式**
+- [x] **Step 5: 运行测试、构建并检查样式**
 
 Run: `npx jest --runTestsByPath src/功能模块/基础设置/公用设置/循环模拟/心法循环模拟/问水诀/components/OptimalSequenceModal/index.test.tsx --watchAll=false --runInBand`
 
 Run: `npm run build`
 
-- [ ] **Step 6: 启动开发服务器进行桌面和移动端冒烟验证**
+- [x] **Step 6: 启动开发服务器进行桌面和移动端冒烟验证**
 
 Run: `HOST=127.0.0.1 BROWSER=none PORT=8001 npm run dev`
 
 检查：弹窗不溢出、长序列可滚动、按钮和文字不重叠、运行中页面仍可操作。
 
-- [ ] **Step 7: 提交新增组件，延后共享入口 hunk**
+- [x] **Step 7: 提交新增组件，延后共享入口 hunk**
 
 ```bash
 git add -f src/功能模块/基础设置/公用设置/循环模拟/心法循环模拟/问水诀/components
@@ -672,19 +676,19 @@ git commit -m "feat: add wenshui optimal sequence UI" --only src/功能模块/�
 - Modify: `AGENTS.md`
 - Modify: `docs/superpowers/specs/2026-07-14-wenshui-optimal-skill-sequence-design.md`
 
-- [ ] **Step 1: 增加显式启用的 600 秒性能基准**
+- [x] **Step 1: 增加显式启用的 600 秒性能基准**
 
 基准默认 `skip`，仅在 `RUN_WENSHUI_OPTIMIZER_BENCHMARK=1` 时执行。断言：60 秒内返回合法结果、概率总和为 1、结果不低于合法基线、结束原因正确。
 
-- [ ] **Step 2: 增加完整 Worker 管线性能基准**
+- [x] **Step 2: 增加完整 Worker 管线性能基准**
 
 `full-pipeline.benchmark.test.ts` 必须执行与 Worker 相同的完整路径：构建并 `structuredClone` 计算快照、分块 Runner、概率聚合、Top K 精确复算、协议完成消息序列化。断言完整管线 60 秒内结束，而不只测裸 `beam-search`。
 
-- [ ] **Step 3: 运行新增测试集合**
+- [x] **Step 3: 运行新增测试集合**
 
-Run: `npx jest --runTestsByPath src/功能模块/基础设置/公用设置/循环模拟/心法循环模拟/问水诀 --watchAll=false --runInBand`
+Run: `npx jest src/功能模块/基础设置/公用设置/循环模拟/心法循环模拟/问水诀 --watchAll=false --runInBand`
 
-- [ ] **Step 4: 运行两个 600 秒真实性能基准**
+- [x] **Step 4: 运行两个 600 秒真实性能基准**
 
 Run: `RUN_WENSHUI_OPTIMIZER_BENCHMARK=1 npx jest --runTestsByPath src/功能模块/基础设置/公用设置/循环模拟/心法循环模拟/问水诀/search/beam-search.benchmark.test.ts --watchAll=false --runInBand`
 
@@ -692,31 +696,37 @@ Run: `RUN_WENSHUI_OPTIMIZER_BENCHMARK=1 npx jest --runTestsByPath src/功能模�
 
 记录实际耗时、扩展节点数、Beam 宽度、内存峰值、精确复算耗时和相对基线提升。若超过 60 秒，优先优化状态复制、状态键和伤害表查询，不降低正确性断言。
 
-- [ ] **Step 5: 在开发服务器中执行一次真实浏览器 Worker 600 秒搜索**
+独立进程实测：Beam Search `9.104s`、峰值堆 `501.22 MiB`；完整管线最终复跑 `11.479s`、峰值堆 `614.73 MiB`、精确复算 `<1ms`。两者均为 `Beam=32`、`50,000 / 50,000` 扩展，以 `确定性预算` 结束且未提前结束。
+
+- [x] **Step 5: 在开发服务器中执行一次真实浏览器 Worker 600 秒搜索**
 
 从“最优序列”弹窗启动 600 秒搜索，确认页面在搜索中仍可交互、Worker 返回的 `workerElapsedMs <= 60000`、最终精确复算完成、应用按钮可用。记录结果中的结束原因和是否提前结束；这一步验证真实浏览器 Worker 启动、消息和渲染开销。
 
-- [ ] **Step 6: 运行问水诀完整回归测试**
+实测 `50,000 / 50,000` 扩展、耗时 `6.8s`，最终精确复算结果已展示，“应用为当前循环”按钮可用；控制台只有项目既存 antd deprecated/useForm 警告。
+
+- [x] **Step 6: 运行问水诀完整回归测试**
 
 Run: `npx jest --runTestsByPath src/心法模块/心法/问水诀/问水诀dps.test.ts src/心法模块/心法/问水诀/玉山揽云.test.ts --watchAll=false --runInBand`
 
-- [ ] **Step 7: 运行项目构建**
+- [x] **Step 7: 运行项目构建**
 
 Run: `npm run build`
 
-- [ ] **Step 8: 使用 requesting-code-review 做规格符合性和风险审查**
+- [x] **Step 8: 使用 requesting-code-review 做规格符合性和风险审查**
 
 重点审查：概率策略语义、上界安全性、Worker 取消、配置指纹、现有循环兼容和性能退化。
 
-- [ ] **Step 9: 根据真实实现经验更新 AGENTS**
+审查发现并修复一个 Critical 和两类 Important 问题：共享循环入口曾整体替换原有心法模拟器；完整管线基准曾过滤缺失系数技能且未让 cloned 快照驱动 Worker DTO；浏览器构建发现 type-only 符号使用普通重导出。入口改为问水诀专属分流并补回归测试，同时补齐三项轻剑技能系数、严格预算断言和 type-only 导出后，回归、基准、浏览器和生产构建均通过。
+
+- [x] **Step 9: 根据真实实现经验更新 AGENTS**
 
 按项目经验模板记录：触发信号、根因/约束、正确做法、验证方式和适用范围。只沉淀经测试或性能基准证明的结论。
 
-- [ ] **Step 10: 使用 verification-before-completion 完成最终验证**
+- [x] **Step 10: 使用 verification-before-completion 完成最终验证**
 
 重新运行所有声称通过的命令，检查 `git diff --check`、实际 UI、开发服务器和剩余未验证风险。
 
-- [ ] **Step 11: 提交新增基准测试，延后项目规则文档 hunk**
+- [x] **Step 11: 提交新增基准测试，延后项目规则文档 hunk**
 
 ```bash
 git add -f src/功能模块/基础设置/公用设置/循环模拟/心法循环模拟/问水诀/search/beam-search.benchmark.test.ts src/功能模块/基础设置/公用设置/循环模拟/心法循环模拟/问水诀/worker/full-pipeline.benchmark.test.ts
@@ -728,7 +738,7 @@ git commit -m "test: benchmark wenshui optimizer" --only src/功能模块/基础
 ## 最终验收命令
 
 ```bash
-npx jest --runTestsByPath src/功能模块/基础设置/公用设置/循环模拟/心法循环模拟/问水诀 --watchAll=false --runInBand
+npx jest src/功能模块/基础设置/公用设置/循环模拟/心法循环模拟/问水诀 --watchAll=false --runInBand
 npx jest --runTestsByPath src/心法模块/心法/问水诀/问水诀dps.test.ts src/心法模块/心法/问水诀/玉山揽云.test.ts --watchAll=false --runInBand
 RUN_WENSHUI_OPTIMIZER_BENCHMARK=1 npx jest --runTestsByPath src/功能模块/基础设置/公用设置/循环模拟/心法循环模拟/问水诀/search/beam-search.benchmark.test.ts --watchAll=false --runInBand
 RUN_WENSHUI_OPTIMIZER_BENCHMARK=1 npx jest --runTestsByPath src/功能模块/基础设置/公用设置/循环模拟/心法循环模拟/问水诀/worker/full-pipeline.benchmark.test.ts --watchAll=false --runInBand

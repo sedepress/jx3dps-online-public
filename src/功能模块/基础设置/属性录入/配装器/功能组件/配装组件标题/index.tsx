@@ -1,6 +1,7 @@
 import React from 'react'
 import { Button, Dropdown } from 'antd'
 import 装备选择范围设置 from './装备选择范围设置'
+import { 清理不适用大附魔 } from '../../工具函数/大附魔品级限制'
 
 function 配装组件标题({
   form,
@@ -24,7 +25,7 @@ function 配装组件标题({
               '大附魔_伤腰',
               '大附魔_伤腕',
               '大附魔_伤鞋',
-            ].includes(item)
+            ].includes(item),
         )
         .map((item) => {
           return {
@@ -53,14 +54,14 @@ function 配装组件标题({
   // 设置所有大附魔
   const setDafumo = (target) => {
     form?.validateFields().then((values) => {
-      const res = {
+      const res = 清理不适用大附魔({
         ...values,
         大附魔_伤帽: target,
         大附魔_伤衣: target,
         大附魔_伤腰: target,
         大附魔_伤腕: target,
         大附魔_伤鞋: target,
-      }
+      })
       保存数据并计算(res)
     })
   }

@@ -95,4 +95,23 @@ describe('问水诀职业 Buff', () => {
       鹤归.状态.待生效事件.find((item) => item.技能名称 === '鹤归孤山·山倾')?.增益签名,
     ).toContain('碧归')
   })
+
+  it('叠锋意层数转换为正式伤害增益签名', () => {
+    let state: ReturnType<typeof 创建问水起手状态> = {
+      ...创建问水起手状态({ 战斗秒数: 30, 加速值: 0, 网络延迟: 0 }),
+      姿态: '重剑' as const,
+    }
+    for (let index = 0; index < 3; index += 1) {
+      const 莺鸣 = 执行动作(state, '莺鸣柳', { 奇穴: ['叠锋意'] })
+      if (!莺鸣.成功) throw new Error(莺鸣.失败原因)
+      state = 莺鸣.状态
+    }
+
+    const 夕照 = 执行动作(state, '夕照雷峰', { 奇穴: ['叠锋意'] })
+    const 命中后 = 推进到帧(夕照.状态, 夕照.状态.技能记录.at(-1)?.命中帧 || 0)
+    const 签名 = 命中后.伤害事件.find((item) => item.技能名称 === '夕照雷峰')?.增益签名
+
+    expect(签名).toContain('叠锋意·3')
+    expect(签名).not.toContain('叠锋意')
+  })
 })

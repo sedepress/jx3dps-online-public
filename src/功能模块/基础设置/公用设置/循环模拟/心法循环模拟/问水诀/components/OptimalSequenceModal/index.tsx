@@ -5,6 +5,7 @@ import { Worker启动参数 } from '../../worker/protocol'
 import { 问水Runner结果 } from '../../search/runner'
 import SearchStatus from '../SearchStatus'
 import SearchResult, { 问水优化展示结果 } from '../SearchResult'
+import type { 问水当前循环基线 } from '../adapter'
 import { 校验问水战斗时间, use问水最优序列 } from './use-optimal-sequence'
 import styles from './index.module.less'
 
@@ -24,6 +25,7 @@ export interface 问水搜索客户端 {
 export interface 问水搜索任务 extends Worker启动参数 {
   战斗时间: number
   配置指纹: string
+  当前循环基线?: 问水当前循环基线
 }
 
 export interface OptimalSequenceModalProps {
@@ -60,7 +62,9 @@ const ModalFooter = (props: FooterProps) => [
   <Button
     key='apply'
     icon={<CheckOutlined />}
-    disabled={!props.结果 || props.配置已过期 || props.运行中}
+    disabled={
+      !props.结果 || props.配置已过期 || props.运行中 || props.结果.是否优于当前循环 === false
+    }
     onClick={props.应用当前结果}
   >
     应用为当前循环
@@ -85,7 +89,7 @@ const ModalContent = (props: OptimalSequenceModalProps & ReturnType<typeof use�
     <SearchStatus
       {...props.进度}
       战斗时间={props.战斗时间 || 0}
-      当前DPS={props.当前DPS}
+      当前DPS={props.比较基线DPS}
       已用毫秒={props.已用毫秒}
     />
     {props.结果 ? <SearchResult 结果={props.结果} 配置已过期={props.配置已过期} /> : null}

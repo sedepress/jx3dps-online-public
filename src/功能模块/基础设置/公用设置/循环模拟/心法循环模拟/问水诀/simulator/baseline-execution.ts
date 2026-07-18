@@ -1,4 +1,5 @@
 import { Excel基线动作 } from '../rules/constants'
+import { 解析问水Excel动作Token } from '../rules/excel-token'
 import { 问水动作上下文, 问水模拟状态 } from '../types'
 import { 执行动作 } from './engine'
 
@@ -11,12 +12,30 @@ interface Excel基线执行结果 {
   失败原因?: string
 }
 
-const 获取玩家动作 = (token: string) => {
-  if (token.includes('云飞玉皇')) return '云飞玉皇'
-  if (token.includes('夕照雷峰')) return '夕照雷峰'
-  if (token.includes('鹤归孤山')) return '鹤归孤山'
-  if (token === '风来吴山') return token
-  return undefined
+const 执行Excel动作Token = (state: 问水模拟状态, token: string, context: 问水动作上下文) => {
+  const parsed = 解析问水Excel动作Token(token)
+  if (!parsed.成功) {
+    return {
+      成功: false as const,
+      状态: state,
+      失败原因: '未知 Excel 基线 token',
+      是否超过战斗时长: false,
+    }
+  }
+  let current = state
+  for (const action of parsed.前置动作.concat(parsed.主要动作, parsed.后置动作)) {
+    const result = 执行动作(current, action, context)
+    if (!result.成功) {
+      return {
+        成功: false as const,
+        状态: current,
+        失败原因: `${action}: ${result.失败原因}`,
+        是否超过战斗时长: result.失败原因 === '超过战斗时长',
+      }
+    }
+    current = result.状态
+  }
+  return { 成功: true as const, 状态: current }
 }
 
 export const 执行Excel基线 = (
@@ -27,17 +46,11 @@ export const 执行Excel基线 = (
   let current = state
   for (let index = 0; index < baseline.length; index += 1) {
     const source = baseline[index]
-    const action = 获取玩家动作(source.技能)
-    if (!action) {
-      return {
-        成功: false,
-        状态: current,
-        执行数量: index,
-        失败原因: `${source.来源列}${source.来源行} ${source.技能}: 未知 Excel 基线 token`,
-      }
-    }
-    const result = 执行动作(current, action, context)
+    const result = 执行Excel动作Token(current, source.技能, context)
     if (!result.成功) {
+      if (result.是否超过战斗时长) {
+        return { 成功: true, 状态: current, 执行数量: index }
+      }
       return {
         成功: false,
         状态: current,

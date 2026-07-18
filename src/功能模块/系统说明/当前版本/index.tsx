@@ -3,16 +3,12 @@ import React, { useEffect, useMemo, useState } from 'react'
 import log_data from '@/更新日志'
 import 获取当前数据 from '@/数据/数据工具/获取当前数据'
 import 心法枚举 from '@/数据/静态数据/心法枚举.json'
-import { useAppDispatch } from '@/hooks'
-import { 更新当前引导步骤, 更新新手引导流程状态 } from '@/store/system'
 import 计算记录对比 from './计算记录对比'
 import './index.css'
 
 const { 缓存映射 } = 获取当前数据()
 
 function Log() {
-  const dispatch = useAppDispatch()
-
   // 更新日志
   const [visible, setVisible] = useState(false)
   // 新版本公告
@@ -27,13 +23,6 @@ function Log() {
     checkLogVersion()
     checkNotice()
   }, [])
-
-  const 检查有无进行过引导 = () => {
-    const storageData = localStorage.getItem(缓存映射.新手引导)
-    if (!storageData) {
-      dispatch(更新新手引导流程状态(true))
-    }
-  }
 
   const checkLogVersion = () => {
     const storageVersion = localStorage.getItem(缓存映射.日志版本)
@@ -53,14 +42,11 @@ function Log() {
   const handleCloseNew = () => {
     localStorage?.setItem(缓存映射.日志版本, log_data?.[0]?.version)
     setNewVersionModalVisible(false)
-    检查有无进行过引导()
   }
 
   const handleCloseNotice = () => {
     localStorage?.setItem(缓存映射.使用说明, '1')
     setNoticeVisible(false)
-    dispatch(更新新手引导流程状态(true))
-    dispatch(更新当前引导步骤(0))
   }
 
   const iconMap = useMemo(() => {

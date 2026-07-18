@@ -1,21 +1,26 @@
 import ImageComponent from '@/组件/图片展示'
 import { Select } from 'antd'
-import { forwardRef, ForwardRefExoticComponent, useMemo, useState } from 'react'
+import { forwardRef, ForwardRefExoticComponent, useEffect, useMemo, useState } from 'react'
 import './index.css'
 import { useAppDispatch, useAppSelector } from '@/hooks'
 import 根据表单选项获取装备信息 from '../../工具函数/根据表单选项获取装备信息'
 import { 秒伤计算 } from '@/计算模块/计算函数'
 import { 整数千分位转换 } from '@/工具函数/help'
+import {
+  大附魔部位简称,
+  判断大附魔等级是否适用,
+  获取表单部位装备品级,
+} from '../../工具函数/大附魔品级限制'
 
 interface 大附魔选择类型 {
   value?: number
-  onChange?: (e: number) => void
-  type: string
+  onChange?: (e?: number) => void
+  type: 大附魔部位简称
   开启装备智能对比: boolean
   form?: any
 }
 
-const 大附魔选择: ForwardRefExoticComponent<大附魔选择类型> = forwardRef((props) => {
+const 大附魔选择: ForwardRefExoticComponent<大附魔选择类型> = forwardRef((props, _ref) => {
   const { type, value, onChange, 开启装备智能对比, form } = props
 
   const 当前计算结果 = useAppSelector((state) => state?.data?.当前计算结果)
@@ -23,8 +28,10 @@ const 大附魔选择: ForwardRefExoticComponent<大附魔选择类型> = forwar
   const [loading, setLoading] = useState<boolean>(false)
   const [dpsUpList, setDpsUpList] = useState<{ value: number; dpsUp: number }[]>()
 
+  const 当前装备品级 = 获取表单部位装备品级(form?.getFieldsValue?.(), type)
+
   const list = useMemo(() => {
-    return [
+    const 全部选项 = [
       {
         label: `英雄·${type}`,
         value: 2,
@@ -36,7 +43,14 @@ const 大附魔选择: ForwardRefExoticComponent<大附魔选择类型> = forwar
         iconId: '23950',
       },
     ]
-  }, [type])
+    return 全部选项.filter((item) => 判断大附魔等级是否适用(当前装备品级, item.value))
+  }, [type, 当前装备品级])
+
+  useEffect(() => {
+    if (value && !判断大附魔等级是否适用(当前装备品级, value)) {
+      onChange?.(undefined)
+    }
+  }, [value, 当前装备品级, onChange])
 
   const getDpsUpList = () => {
     if (开启装备智能对比) {
@@ -81,6 +95,7 @@ const 大附魔选择: ForwardRefExoticComponent<大附魔选择类型> = forwar
       loading={loading}
       allowClear
       placeholder={`未选择 ${type}`}
+      notFoundContent='当前装备品级不支持大附魔'
       className='dafumo-select'
       popupClassName='dafumo-select-popup'
       popupMatchSelectWidth={开启装备智能对比 ? 200 : undefined}

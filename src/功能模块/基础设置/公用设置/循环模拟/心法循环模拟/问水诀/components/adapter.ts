@@ -1,8 +1,9 @@
-import { 循环技能详情 } from '@/@types/循环'
+import { 循环技能详情, 循环详情 } from '@/@types/循环'
 import { 秒伤计算 } from '@/计算模块/计算函数'
 import { 数据模块类型 } from '@/store/data'
 import { 计算增益数据中加速值 } from '@/工具函数/data'
 import 获取当前数据 from '@/数据/数据工具/获取当前数据'
+import { 根据战斗时间生成循环详情 } from '@/计算模块/统一工具函数/战斗时间循环'
 import { 构建问水优化循环 } from '../apply/build-custom-cycle'
 import { 应用问水优化循环 } from '../apply/apply-custom-cycle'
 import { 聚合问水策略, 问水聚合项, 转换问水聚合项为循环 } from '../damage/aggregate-policy'
@@ -14,6 +15,13 @@ import { 创建问水优化搜索任务, 创建问水配置指纹 } from './cont
 interface 问水主线程适配参数 {
   data: 数据模块类型
   dispatch: any
+}
+
+export interface 问水当前循环基线 {
+  技能详情: 循环技能详情[]
+  技能序列: string[]
+  DPS: number
+  循环详情: 循环详情
 }
 
 const 获取指纹数据 = (data: 数据模块类型) => ({
@@ -56,11 +64,16 @@ const 创建循环技能 = (item: 问水聚合项): 循环技能详情 => ({
 })
 
 const 执行问水DPS计算 = (
-  params: 问水主线程适配参数 & { 战斗时间: number; 技能详情: 循环技能详情[] },
+  params: 问水主线程适配参数 & {
+    战斗时间: number
+    技能详情: 循环技能详情[]
+    循环详情?: 循环详情
+  },
 ) =>
   params.dispatch(
     秒伤计算({
       更新循环技能列表: params.技能详情,
+      更新计算循环详情: params.循环详情,
       更新计算时间: params.战斗时间,
       更新奇穴数据: params.data.当前奇穴信息,
       更新秘籍信息: params.data.当前秘籍信息,
@@ -69,6 +82,64 @@ const 执行问水DPS计算 = (
       计算技能详情: true,
     }),
   )
+
+const 是否真实提升 = (候选DPS: number, 基线DPS?: number) => {
+  if (基线DPS === undefined) return true
+  const 容差 = Math.max(1e-6, Math.abs(基线DPS) * 1e-9)
+  return 候选DPS - 基线DPS > 容差
+}
+
+const 匹配循环详情 = (params: 问水主线程适配参数) => {
+  const data = 获取当前数据()
+  const cycles = [...(data?.计算循环 || []), ...(params.data.自定义循环列表 || [])]
+  const normalizedName = (params.data.当前计算循环名称 || '').replace(/叠峰意/g, '叠锋意')
+  const orangeName = `${normalizedName}橙武`
+  const targetName = params.data.装备信息?.装备增益?.大橙武特效 ? orangeName : normalizedName
+  const normalizedCycles = cycles.map((item) => ({
+    item,
+    name: item.名称.replace(/叠峰意/g, '叠锋意'),
+  }))
+  const cycle =
+    normalizedCycles.find((item) => item.name === targetName)?.item ||
+    normalizedCycles.find((item) => item.name === normalizedName)?.item
+  const acceleration = 获取当前加速值(params.data)
+  const detail =
+    cycle?.循环详情?.find((item) => {
+      const range = item.循环加速值范围
+      const rangeMatches = Array.isArray(range?.[0])
+        ? (range as (number | string)[][]).some(
+            ([min, max]) => acceleration >= +min && acceleration < +max,
+          )
+        : !!range?.length && acceleration >= +range[0] && acceleration < +range[1]
+      const delayMatches =
+        item.循环延迟要求 === undefined || +item.循环延迟要求 === +params.data.网络延迟
+      return rangeMatches && delayMatches
+    }) || cycle?.循环详情?.[0]
+  return { cycle, detail }
+}
+
+const 获取当前循环基线 = (
+  params: 问水主线程适配参数,
+  战斗时间: number,
+): 问水当前循环基线 | undefined => {
+  if (战斗时间 < 10) return undefined
+  const { cycle, detail: selected } = 匹配循环详情(params)
+  if (!selected?.技能详情?.length) return undefined
+  const detail = 根据战斗时间生成循环详情(selected, 战斗时间)
+  const result = 执行问水DPS计算({
+    ...params,
+    战斗时间: detail.战斗时间,
+    技能详情: detail.技能详情,
+    循环详情: detail,
+  })
+  if (!Number.isFinite(result.秒伤)) return undefined
+  return {
+    技能详情: detail.技能详情,
+    技能序列: cycle?.技能序列 || [],
+    DPS: result.秒伤,
+    循环详情: detail,
+  }
+}
 
 const 创建单次伤害计算器 = (params: 问水主线程适配参数, 战斗时间: number) => (item: 问水聚合项) => {
   const result = 执行问水DPS计算({
@@ -85,7 +156,7 @@ export const 创建当前问水搜索任务 = (params: 问水主线程适配参�
   if (!params.data.装备信息?.装备基础属性?.基础攻击) {
     throw new Error('缺少装备基础攻击，无法开始搜索')
   }
-  return 创建问水优化搜索任务({
+  const task = 创建问水优化搜索任务({
     战斗时间: params.战斗时间,
     加速值: 获取当前加速值(params.data),
     网络延迟: params.data.网络延迟,
@@ -96,6 +167,7 @@ export const 创建当前问水搜索任务 = (params: 问水主线程适配参�
     配置指纹: 获取当前问水配置指纹(params.data),
     计算单次伤害: 创建单次伤害计算器(params, params.战斗时间),
   })
+  return { ...task, 当前循环基线: 获取当前循环基线(params, params.战斗时间) }
 }
 
 const 获取循环增益签名 = (item: 问水聚合项) =>
@@ -114,7 +186,34 @@ export const 转换当前问水搜索结果 = (
     解析增益签名: 获取循环增益签名,
   })
   if (!cycle.成功) throw new Error(cycle.失败原因)
-  const exact = 执行问水DPS计算({ ...params, 战斗时间: task.战斗时间, 技能详情: cycle.技能详情 })
+  const baseline = task.当前循环基线
+  const 候选循环详情 = baseline ? { ...baseline.循环详情, 技能详情: cycle.技能详情 } : undefined
+  const exact = 执行问水DPS计算({
+    ...params,
+    战斗时间: 候选循环详情?.战斗时间 || task.战斗时间,
+    技能详情: cycle.技能详情,
+    循环详情: 候选循环详情,
+  })
+  if (!Number.isFinite(exact.秒伤)) {
+    throw new Error('候选精确 DPS 不是有限数')
+  }
+  if (baseline && !是否真实提升(exact.秒伤, baseline.DPS)) {
+    return {
+      战斗时间: task.战斗时间,
+      配置指纹: task.配置指纹,
+      技能序列: baseline.技能序列,
+      条件规则: [],
+      技能详情: baseline.技能详情,
+      预期DPS: baseline.DPS,
+      当前循环DPS: baseline.DPS,
+      是否优于当前循环: false,
+      搜索耗时: result.workerElapsedMs,
+      扩展节点数: result.扩展节点数,
+      扩展预算: task.搜索参数.扩展预算,
+      提前结束: result.是否提前结束,
+      结束原因: '保留当前循环',
+    }
+  }
   return {
     战斗时间: task.战斗时间,
     配置指纹: task.配置指纹,
@@ -122,6 +221,8 @@ export const 转换当前问水搜索结果 = (
     条件规则: result.最佳候选.条件规则,
     技能详情: cycle.技能详情,
     预期DPS: exact.秒伤,
+    当前循环DPS: baseline?.DPS,
+    是否优于当前循环: 是否真实提升(exact.秒伤, baseline?.DPS),
     搜索耗时: result.workerElapsedMs,
     扩展节点数: result.扩展节点数,
     扩展预算: task.搜索参数.扩展预算,

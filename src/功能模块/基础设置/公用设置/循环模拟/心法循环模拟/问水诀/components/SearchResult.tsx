@@ -16,6 +16,8 @@ export interface 问水优化展示结果 {
   扩展预算: number
   提前结束: boolean
   结束原因: string
+  当前循环DPS?: number
+  是否优于当前循环?: boolean
 }
 
 interface SearchResultProps {
@@ -70,9 +72,14 @@ function SearchResult(props: SearchResultProps) {
         <span>{`${结果.扩展节点数.toLocaleString()} 次扩展`}</span>
         <span>{`${(结果.搜索耗时 / 1000).toFixed(1)}s`}</span>
         {结果.提前结束 ? <Tag color='gold'>提前结束</Tag> : null}
+        {结果.是否优于当前循环 === false ? <Tag color='blue'>保留当前循环</Tag> : null}
       </div>
       {配置已过期 ? <Alert type='warning' showIcon message='当前配置已变化，请重新搜索' /> : null}
+      {结果.是否优于当前循环 === false ? (
+        <Alert type='info' showIcon message='本次搜索未超过当前循环，已保留当前循环结果' />
+      ) : null}
       <Tabs
+        defaultActiveKey={结果.技能序列.length ? 'sequence' : 'statistics'}
         items={[
           { key: 'sequence', label: '技能序列', children: <技能序列 {...props} /> },
           { key: 'statistics', label: '技能统计', children: <技能统计 {...props} /> },

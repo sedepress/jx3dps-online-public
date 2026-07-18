@@ -125,6 +125,25 @@ describe('问水诀最优序列弹窗', () => {
       true,
     )
   })
+
+  it('未超过当前循环时展示保留状态并禁止应用', () => {
+    const client = 创建客户端()
+    const props = 创建属性(client)
+    props.转换结果.mockReturnValue({
+      ...创建展示结果(),
+      技能序列: [],
+      是否优于当前循环: false,
+    })
+    render(<OptimalSequenceModal {...props} />)
+
+    fireEvent.click(screen.getByRole('button', { name: /开始搜索/ }))
+    act(() => client.回调?.完成?.(创建Worker结果(false)))
+
+    expect(screen.getByText('本次搜索未超过当前循环，已保留当前循环结果')).toBeTruthy()
+    expect(screen.getByRole<HTMLButtonElement>('button', { name: /应用为当前循环/ }).disabled).toBe(
+      true,
+    )
+  })
 })
 
 describe('问水诀最优序列控制器', () => {
@@ -146,8 +165,9 @@ describe('问水诀最优序列控制器', () => {
     expect(task.战斗时间).toBe(10)
     expect(task.配置指纹).toBe('fingerprint-1')
     expect(task.搜索参数.初始状态).toMatchObject({ 结束帧: 160, 加速值: 9232, 网络延迟: 1 })
+    expect(task.搜索参数.初始状态).toMatchObject({ 姿态: '重剑', 剑气: 100 })
     expect(task.搜索参数.动作上下文).toEqual({ 奇穴: input.奇穴, 秘籍: input.秘籍 })
-    expect(task.搜索参数.条件动作).toContainEqual({ 技能名称: '断潮' })
+    expect(task.搜索参数.条件动作).toEqual([])
     expect(task.搜索参数.伤害表.length).toBeGreaterThan(0)
     expect(task.搜索参数.最大理论每帧伤害).toBeGreaterThan(0)
     expect(task.搜索参数.会心率).toBe(0.37)
@@ -220,6 +240,41 @@ describe('问水诀最优序列控制器', () => {
     expect(display.技能详情.length).toBeGreaterThan(0)
     expect(Number.isFinite(display.预期DPS)).toBe(true)
     expect(display.预期DPS).toBe(official.秒伤)
+  })
+
+  it('搜索结果不能低于同一战斗时间的当前循环基线', async () => {
+    await 初始化心法数据('问水诀')
+    const cycle = 心法配置.计算循环.find((item) => item.名称 === '叠锋意斩岳循环')
+    const data = {
+      网络延迟: 1,
+      装备信息: 心法配置.默认数据.配装,
+      当前输出计算目标名称: '134级木桩',
+      增益启用: false,
+      增益数据: { 阵眼: '', 小吃: [], 团队增益: [] },
+      当前奇穴信息: cycle?.奇穴 || [],
+      当前秘籍信息: 心法配置.默认数据.秘籍,
+      当前计算循环名称: cycle?.名称 || '',
+      自定义循环列表: [],
+      团队增益轴: 默认团队增益轴,
+      当前计算结果: { 秒伤: 0, 总伤: 0, 秒伤计算时间: 0, 计算结果技能列表: [] },
+    } as any
+    const dispatch = (action) =>
+      typeof action === 'function' ? action(undefined, () => ({ data })) : action
+    const task = 创建当前问水搜索任务({ data, dispatch, 战斗时间: 220 })
+
+    expect(task.当前循环基线?.DPS).toBeGreaterThan(0)
+    const poor = await 运行问水分块搜索({
+      搜索参数: { ...task.搜索参数, Beam宽度: 1, 扩展预算: 1 },
+      每块扩展数: 1,
+      紧急上限毫秒: 60_000,
+      获取当前时间: () => 0,
+      让出事件循环: async () => undefined,
+    })
+    const display = 转换当前问水搜索结果(poor, task, { data, dispatch })
+
+    expect(display.预期DPS).toBeGreaterThanOrEqual(task.当前循环基线?.DPS || 0)
+    expect(display.是否优于当前循环).toBe(false)
+    expect(display.技能详情.some((skill) => skill.技能名称 === '听雷-轻')).toBe(true)
   })
 })
 

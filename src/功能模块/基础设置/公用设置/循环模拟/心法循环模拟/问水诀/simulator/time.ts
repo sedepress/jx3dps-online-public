@@ -1,6 +1,7 @@
 import { 获取实际帧数 } from '@/工具函数/data'
 import { 问水Buff状态, 问水模拟状态 } from '../types'
 import { 比较问水事件, 结算问水事件 } from './events'
+import { 获取技能充能结束帧, 恢复到时技能充能 } from './resources'
 
 type 问水玩家动作 = (state: 问水模拟状态) => 问水模拟状态
 
@@ -16,7 +17,7 @@ const 获取中间帧 = (state: 问水模拟状态, targetFrame: number) => {
   const Buff帧 = 获取Buff结束帧(state.自身Buff)
     .concat(获取Buff结束帧(state.目标Buff))
     .concat(获取Buff结束帧(state.团队增益))
-  return Array.from(new Set(事件帧.concat(Buff帧)))
+  return Array.from(new Set(事件帧.concat(Buff帧, 获取技能充能结束帧(state))))
     .filter((frame) => frame > state.当前帧 && frame < targetFrame)
     .sort((a, b) => a - b)
 }
@@ -38,7 +39,7 @@ export const 清理过期Buff = (state: 问水模拟状态, frame: number): 问�
 })
 
 const 执行空动作帧 = (state: 问水模拟状态, frame: number) =>
-  清理过期Buff(结算到时事件(state, frame), frame)
+  清理过期Buff(恢复到时技能充能(结算到时事件(state, frame), frame), frame)
 
 const 校验目标帧 = (state: 问水模拟状态, targetFrame: number) => {
   if (!Number.isInteger(targetFrame) || targetFrame < state.当前帧) {
@@ -53,7 +54,7 @@ export const 执行同帧 = (
 ): 问水模拟状态 => {
   校验目标帧(state, targetFrame)
   const 到达目标前 = 获取中间帧(state, targetFrame).reduce(执行空动作帧, state)
-  const 已结算事件 = 结算到时事件(到达目标前, targetFrame)
+  const 已结算事件 = 恢复到时技能充能(结算到时事件(到达目标前, targetFrame), targetFrame)
   return 清理过期Buff(玩家动作(已结算事件), targetFrame)
 }
 

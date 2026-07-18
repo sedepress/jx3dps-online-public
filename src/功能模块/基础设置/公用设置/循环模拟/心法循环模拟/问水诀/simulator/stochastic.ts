@@ -43,6 +43,7 @@ const 获取可观察状态键 = (state: 问水模拟状态) =>
     目标Buff: 排序记录(state.目标Buff),
     团队增益: 排序记录(state.团队增益),
     技能CD: 排序记录(state.技能CD),
+    技能充能: 排序记录(state.技能充能),
     GCD: { 公共: state.GCD.公共, 自身: 排序记录(state.GCD.自身) },
     待生效事件: state.待生效事件,
     技能记录数量: state.技能记录.length,
@@ -64,12 +65,13 @@ const 缩放压缩伤害 = (伤害: 问水压缩伤害, target: number, source: 
 const 累加压缩项 = (伤害: 问水压缩伤害, event: 问水伤害事件, probability: number) => {
   const key = 获取问水伤害键(event)
   const current = 伤害[key] || 从问水伤害事件创建聚合项(event)
+  const 权重 = event.权重 ?? 1
   return {
     ...伤害,
     [key]: {
       ...current,
-      施放数量: current.施放数量 + probability,
-      伤害次数: current.伤害次数 + probability * event.伤害次数,
+      施放数量: current.施放数量 + probability * 权重,
+      伤害次数: current.伤害次数 + probability * 权重 * event.伤害次数,
     },
   }
 }
@@ -169,20 +171,34 @@ export const 处理断潮触发 = (
 export const 选择断潮条件动作 = (state: 问水模拟状态, rule: 断潮条件规则) =>
   state.断潮可用 ? rule.技能名称 : rule.回退动作
 
-const 插入断潮事件 = (state: 问水模拟状态, context: 问水动作上下文): 问水动作结果 => {
+const 插入断潮事件 = (state: 问水模拟状态, context: 问水动作上下文, 施放权重 = 1): 问水动作结果 => {
   const 技能名称 = state.姿态 === '轻剑' ? '断潮-轻' : '断潮'
-  const event = 创建带增益签名的伤害事件(state, {
+  const 伤害事件 = 创建带增益签名的伤害事件(state, {
     技能名称,
     命中帧: state.当前帧,
     序号: state.技能记录.length,
     额外增益签名: state.姿态 === '重剑' && context.奇穴?.includes('怜光') ? ['怜光'] : [],
   })
+  伤害事件.事件数据 = { ...伤害事件.事件数据, 施放权重 }
+  const events =
+    施放权重 === 1
+      ? [
+          {
+            事件类型: '资源' as const,
+            生效帧: state.当前帧,
+            序号: state.技能记录.length - 1000,
+            技能名称,
+            事件数据: { 剑气变化: 5 },
+          },
+          伤害事件,
+        ]
+      : [伤害事件]
   return {
     成功: true,
     状态: {
       ...state,
       断潮可用: false,
-      待生效事件: state.待生效事件.concat(event).sort(比较问水事件),
+      待生效事件: state.待生效事件.concat(events).sort(比较问水事件),
       技能记录: state.技能记录.concat({
         技能名称,
         开始帧: state.当前帧,
@@ -198,10 +214,11 @@ export const 执行断潮条件规则 = (
   state: 问水模拟状态,
   rule: 断潮条件规则,
   context: 问水动作上下文 = {},
+  施放权重 = 1,
 ): 问水动作结果 => {
   const action = 选择断潮条件动作(state, rule)
   if (!action) return { 成功: true, 状态: state }
-  if (action === '断潮') return 插入断潮事件(state, context)
+  if (action === '断潮') return 插入断潮事件(state, context, 施放权重)
   return 执行动作(state, action, context)
 }
 

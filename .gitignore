@@ -31,3 +31,10 @@ yarn-error.log*
 /.idea/
 .idea/
 .claude
+AGENTS.md
+.playwright-mcp
+.serena
+.spec-workflow
+.superpowers
+.husky
+docs/

@@ -1,17 +1,26 @@
 import { describe, expect, it } from '@jest/globals'
-import { 获取问水聚合项键, 问水聚合项 } from '../damage/aggregate-policy'
+import { 聚合问水策略, 获取问水聚合项键, 问水聚合项 } from '../damage/aggregate-policy'
 import { 问水伤害表项 } from '../damage/build-damage-table'
 import { 创建问水起手状态 } from '../simulator/create-state'
 import { 构建问水合法基线 } from './baseline'
 import { 搜索问水Beam策略 } from './beam-search'
 import {
+  创建问水搜索起点,
+  扩展问水搜索候选,
   穷举问水最优策略,
   评估问水动作序列,
   评估问水策略步骤,
   问水搜索配置,
 } from './exhaustive-oracle'
 
-const 技能伤害: Record<string, number> = { '听雷-轻': 100, 黄龙吐翠: 125 }
+const 主技能伤害: Record<string, number> = { '听雷-轻': 100, 黄龙吐翠: 125 }
+const 派生技能伤害: Record<string, number> = {
+  三柴剑法: 30,
+  '新破招(夕)': 200,
+  '新破招(云)': 300,
+  四季剑法: 40,
+}
+const 技能伤害 = { ...主技能伤害, ...派生技能伤害 }
 
 describe('问水诀 Beam Search', () => {
   it.each([1, 2, 3, 4, 5, 6, 7, 8, 9, 10])('%s 秒结果与穷举 Oracle 一致', (seconds) => {
@@ -93,6 +102,78 @@ describe('问水诀 Beam Search', () => {
     ).toBeCloseTo(0.8)
   })
 
+  it('自动断潮按会心加固定触发率结算且不占用主动动作', () => {
+    const config = {
+      ...创建概率搜索配置(),
+      条件动作: [],
+      自动施放断潮: true,
+      断潮固定触发率: 0.3,
+    }
+    const result = 评估问水动作序列(config, ['听雷-轻'])
+
+    expect(result.成功).toBe(true)
+    if (!result.成功) return
+    const aggregated = 聚合问水策略({ 分支: result.候选.分支 })
+    expect(aggregated.成功).toBe(true)
+    if (!aggregated.成功) return
+    expect(aggregated.项目.find((item) => item.技能名称 === '断潮-轻')?.施放数量).toBeCloseTo(0.67)
+    expect(result.候选.分支).toHaveLength(1)
+    expect(result.候选.条件规则).toEqual([])
+    expect(result.候选.分支.every((branch) => !branch.状态.断潮可用)).toBe(true)
+    expect(
+      result.候选.分支[0].状态.待生效事件.some(
+        (event) => event.事件类型 === '资源' && event.技能名称 === '断潮-轻',
+      ),
+    ).toBe(false)
+  })
+
+  it('叠锋意每层为断潮追加 10% 固定触发率', () => {
+    const base = 创建概率搜索配置()
+    const config = {
+      ...base,
+      初始状态: {
+        ...base.初始状态,
+        自身Buff: { 叠锋意: { 层数: 2, 获得帧: 0, 结束帧: 100 } },
+      },
+      条件动作: [],
+      自动施放断潮: true,
+      断潮固定触发率: 0.3,
+    }
+    const result = 评估问水动作序列(config, ['听雷-轻'])
+
+    if (!result.成功) throw new Error(result.失败原因)
+    const aggregated = 聚合问水策略({ 分支: result.候选.分支 })
+    if (!aggregated.成功) throw new Error(aggregated.失败原因)
+    expect(aggregated.项目.find((item) => item.技能名称 === '断潮-轻')?.施放数量).toBeCloseTo(0.87)
+  })
+
+  it('自动断潮触发率按一次主动技能封顶为 1', () => {
+    const base = 创建概率搜索配置()
+    const result = 评估问水动作序列(
+      {
+        ...base,
+        初始状态: {
+          ...base.初始状态,
+          自身Buff: { 叠锋意: { 层数: 3, 获得帧: 0, 结束帧: 100 } },
+        },
+        自动施放断潮: true,
+        断潮固定触发率: 0.3,
+        会心率: 0.8,
+      },
+      ['听雷-轻'],
+    )
+
+    if (!result.成功) throw new Error(result.失败原因)
+    const aggregated = 聚合问水策略({ 分支: result.候选.分支 })
+    if (!aggregated.成功) throw new Error(aggregated.失败原因)
+    expect(aggregated.项目.find((item) => item.技能名称 === '断潮-轻')?.施放数量).toBeCloseTo(1)
+    expect(
+      result.候选.分支[0].状态.待生效事件.some(
+        (event) => event.事件类型 === '资源' && event.技能名称 === '断潮-轻',
+      ),
+    ).toBe(true)
+  })
+
   it('条件回退动作按实际施放技能会心率触发断潮', () => {
     const config = {
       ...创建概率搜索配置(),
@@ -133,17 +214,20 @@ describe('问水诀 Beam Search', () => {
 
     expect(穷举问水最优策略({ ...config, 最大扩展数: 10 })).toEqual({
       成功: false,
-      失败原因: '听雷-轻: 伤害表缺少对应签名',
+      失败原因: '三柴剑法: 伤害表缺少对应签名',
     })
     expect(搜索问水Beam策略({ ...config, Beam宽度: 2, 扩展预算: 10 })).toEqual({
       成功: false,
-      失败原因: '听雷-轻: 伤害表缺少对应签名',
+      失败原因: '三柴剑法: 伤害表缺少对应签名',
     })
   })
 
   it('扩展预算在动作计算前截断', () => {
     const config = 创建搜索配置(2)
-    const firstOnly = { ...config, 伤害表: [config.伤害表[0]] }
+    const firstOnly = {
+      ...config,
+      伤害表: config.伤害表.filter((item) => ['听雷-轻', '三柴剑法'].includes(item.技能名称)),
+    }
 
     expect(搜索问水Beam策略({ ...firstOnly, Beam宽度: 2, 扩展预算: 1 })).toMatchObject({
       成功: true,
@@ -154,6 +238,38 @@ describe('问水诀 Beam Search', () => {
       成功: false,
       失败原因: '黄龙吐翠: 伤害表缺少对应签名',
     })
+  })
+
+  it('扩展预算不消耗在姿态不符或 CD 未好的必失败动作上', () => {
+    const initial = {
+      ...创建问水起手状态({ 战斗秒数: 30, 加速值: 0, 网络延迟: 0 }),
+      姿态: '重剑' as const,
+      剑气: 100,
+    }
+    const config: 问水搜索配置 = {
+      初始状态: initial,
+      主技能: ['听雷-轻', '鹤归孤山', '夕照雷峰'],
+      条件动作: [],
+      伤害表: [
+        创建伤害表项('鹤归孤山', 100),
+        创建伤害表项('四季剑法', 10),
+        创建伤害表项('夕照雷峰', 50),
+        创建伤害表项('新破招(夕)', 20),
+      ],
+      最大理论每帧伤害: 100,
+    }
+    const start = 创建问水搜索起点(config)
+    if (!start.成功) throw new Error(start.失败原因)
+    const first = 扩展问水搜索候选(start.候选, config, { 稳定序号: 1, 最多尝试: 1 })
+
+    expect(first).toMatchObject({ 成功: true, 消耗扩展数: 1 })
+    if (!first.成功) return
+    expect(first.候选[0].主序列).toEqual(['鹤归孤山'])
+
+    const 鹤归后 = first.候选[0]
+    const second = 扩展问水搜索候选(鹤归后, config, { 稳定序号: 2, 最多尝试: 1 })
+    if (!second.成功) throw new Error(second.失败原因)
+    expect(second.候选[0].主序列).toEqual(['鹤归孤山', '夕照雷峰'])
   })
 
   it('跨层重复的零帧姿态状态不会耗尽预算', () => {
@@ -168,13 +284,33 @@ describe('问水诀 Beam Search', () => {
 
     expect(result).toMatchObject({ 成功: true, 结束原因: '空间收敛' })
     if (!result.成功) return
-    expect(result.扩展节点数).toBeLessThan(10)
+    expect(result.扩展节点数).toBeLessThan(20)
+  })
+
+  it('技能 CD 中通过内部等待推进到下一次可用帧', () => {
+    const initial = {
+      ...创建问水起手状态({ 战斗秒数: 30, 加速值: 0, 网络延迟: 0 }),
+      姿态: '重剑' as const,
+      剑气: 100,
+    }
+    const config: 问水搜索配置 = {
+      初始状态: initial,
+      主技能: ['鹤归孤山'],
+      条件动作: [],
+      伤害表: [创建伤害表项('鹤归孤山', 100), 创建伤害表项('四季剑法', 10)],
+      最大理论每帧伤害: 100,
+    }
+    const result = 搜索问水Beam策略({ ...config, Beam宽度: 4, 扩展预算: 100 })
+
+    expect(result).toMatchObject({ 成功: true })
+    if (!result.成功) return
+    expect(result.最佳候选.主序列).toEqual(['鹤归孤山', '鹤归孤山'])
   })
 })
 
 const 创建搜索配置 = (seconds: number): 问水搜索配置 => ({
   初始状态: 创建问水起手状态({ 战斗秒数: seconds, 加速值: 0, 网络延迟: 0 }),
-  主技能: Object.keys(技能伤害),
+  主技能: Object.keys(主技能伤害),
   条件动作: [],
   伤害表: Object.entries(技能伤害).map(([name, damage]) => 创建伤害表项(name, damage)),
   最大理论每帧伤害: Math.max(...Object.values(技能伤害)),
@@ -186,7 +322,14 @@ const 创建概率搜索配置 = (): 问水搜索配置 => ({
   条件动作: [{ 技能名称: '断潮', 回退动作: '听雷-轻' }],
   触发断潮技能: ['听雷-轻'],
   会心率: 0.37,
-  伤害表: [创建伤害表项('听雷-轻', 100), 创建伤害表项('断潮-轻', 1000)],
+  伤害表: [
+    创建伤害表项('听雷-轻', 100),
+    创建伤害表项('三柴剑法', 30),
+    创建伤害表项('断潮-轻', 1000),
+    创建伤害表项('新破招(夕)', 200),
+    创建伤害表项('新破招(云)', 300),
+    创建伤害表项('四季剑法', 40),
+  ],
   最大理论每帧伤害: 1000,
 })
 

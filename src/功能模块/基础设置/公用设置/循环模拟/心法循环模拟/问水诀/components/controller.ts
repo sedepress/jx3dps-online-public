@@ -40,6 +40,7 @@ const 伤害技能 = [
   '九溪弥烟-轻',
   '夕照雷峰',
   '云飞玉皇',
+  '云景·云飞玉皇',
   '云飞玉皇·二段',
   '鹤归孤山',
   '鹤归孤山·山倾',
@@ -48,6 +49,9 @@ const 伤害技能 = [
   '九皋鹤野·落剑',
   '断潮',
   '断潮-轻',
+  '四季剑法',
+  '新破招(夕)',
+  '新破招(云)',
 ]
 
 const 稳定化数据 = (value: any): any => {
@@ -92,6 +96,14 @@ const 追加可选签名 = (combinations: string[][], signature: string) =>
 const 获取职业签名组合 = (skill: string, talents: string[]) => {
   let combinations: string[][] = [[]]
   if (talents.includes('雾锁')) combinations = 追加可选签名(combinations, '雾锁')
+  if (talents.includes('叠锋意')) {
+    combinations = combinations.flatMap((item) => [
+      item,
+      item.concat('叠锋意·1'),
+      item.concat('叠锋意·2'),
+      item.concat('叠锋意·3'),
+    ])
+  }
   const isHeavy = ![
     '听雷-轻',
     '三柴剑法',
@@ -162,7 +174,7 @@ const 获取基线序列 = (params: 创建问水优化搜索任务参数, initia
     贪心动作顺序: Object.keys(问水技能定义),
     动作上下文: { 奇穴: params.奇穴, 秘籍: params.秘籍 },
   })
-  return baseline.成功 ? baseline.动作序列 : undefined
+  return baseline.成功 && baseline.来源 === 'Excel' ? baseline.动作序列 : undefined
 }
 
 export const 创建问水优化搜索任务 = (params: 创建问水优化搜索任务参数): 问水搜索任务 => {
@@ -171,7 +183,11 @@ export const 创建问水优化搜索任务 = (params: 创建问水优化搜索�
     加速值: params.加速值,
     网络延迟: params.网络延迟,
   })
-  const initialState = 添加团队增益轴事件(emptyState, params.团队增益轴)
+  // Excel 问水循环以重剑满剑气作为战斗轴起点；从轻剑 0 剑气会退化成听雷填充循环。
+  const initialState = 添加团队增益轴事件(
+    { ...emptyState, 姿态: '重剑', 剑气: 100 },
+    params.团队增益轴,
+  )
   const { table, 会心率, 会心率映射 } = 构建伤害表(params, initialState.结束帧)
   const mainSkills = Object.values(问水技能定义).map((skill) => skill.名称)
   return {
@@ -182,9 +198,11 @@ export const 创建问水优化搜索任务 = (params: 创建问水优化搜索�
     搜索参数: {
       初始状态: initialState,
       主技能: mainSkills,
-      条件动作: [{ 技能名称: '断潮' }],
+      条件动作: [],
       动作上下文: { 奇穴: params.奇穴, 秘籍: params.秘籍 },
       触发断潮技能: mainSkills.filter((name) => 问水技能定义[name]?.造成伤害),
+      自动施放断潮: true,
+      断潮固定触发率: 0.3,
       会心率,
       会心率映射,
       伤害表: table,

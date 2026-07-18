@@ -1,4 +1,5 @@
 import * as luadata from 'luadata'
+import { inflate } from 'pako'
 // https://github.com/tinymins/luadata
 
 function DecompressLUAData(compressedBase64) {
@@ -16,9 +17,7 @@ function DecompressLUAData(compressedBase64) {
   }
 
   // 2. Zlib解压
-  // eslint-disable-next-line @typescript-eslint/ban-ts-comment
-  // @ts-ignore
-  const decompressed = pako?.inflate(bytes)
+  const decompressed = inflate(bytes)
 
   if (!decompressed) return
 

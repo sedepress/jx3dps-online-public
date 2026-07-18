@@ -56,10 +56,11 @@ const 聚合历史事件 = (histories: 问水分支历史[]) => {
     history.伤害事件.forEach((event) => {
       const key = 获取问水伤害键(event)
       const current = grouped.get(key) || 从问水伤害事件创建聚合项(event)
+      const 权重 = event.权重 ?? 1
       grouped.set(key, {
         ...current,
-        施放数量: current.施放数量 + history.概率,
-        伤害次数: current.伤害次数 + history.概率 * event.伤害次数,
+        施放数量: current.施放数量 + history.概率 * 权重,
+        伤害次数: current.伤害次数 + history.概率 * 权重 * event.伤害次数,
       })
     })
   })

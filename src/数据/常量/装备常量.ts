@@ -15,4 +15,9 @@ export const 大附魔ID = {
   ],
 }
 
-export const 本赛季英雄品级 = 32000
+export const 大附魔最大装备品级 = {
+  1: 35900,
+  2: 43000,
+} as const
+
+export const 本赛季英雄品级 = 35900

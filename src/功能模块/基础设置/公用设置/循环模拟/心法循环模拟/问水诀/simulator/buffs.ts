@@ -1,7 +1,7 @@
 import { 问水动作上下文, 问水待生效事件, 问水模拟状态 } from '../types'
 
-const 消耗剑气技能 = ['夕照雷峰', '云飞玉皇']
-const 碧归生效技能 = ['夕照雷峰', '云飞玉皇', '鹤归孤山']
+const 消耗剑气技能 = ['夕照雷峰', '云飞玉皇', '云景·云飞玉皇']
+const 碧归生效技能 = ['夕照雷峰', '云飞玉皇', '云景·云飞玉皇', '鹤归孤山']
 
 export const 获取重剑剑气变化 = (
   state: 问水模拟状态,
@@ -20,6 +20,9 @@ export const 获取职业增益签名 = (
 ) => {
   const 签名: string[] = []
   if (context.奇穴?.includes('怜光')) 签名.push('怜光')
+  if (context.奇穴?.includes('叠锋意') && state.自身Buff.叠锋意) {
+    签名.push(`叠锋意·${state.自身Buff.叠锋意.层数}`)
+  }
   if (state.自身Buff.碧归 && 碧归生效技能.includes(技能名称) && context.奇穴?.includes('碧归')) {
     签名.push('碧归')
   }
