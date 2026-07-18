@@ -4,7 +4,7 @@
 
 **Goal:** 让问水诀最优序列按正式 DPS 复算选择胜者，保证结果不低于当前预设循环，并展示带技能图标的完整玩家按键序列。
 
-**Architecture:** 先修正问水诀倒读条技能错误延长公共 GCD 的模拟规则，使合法 Excel 基线能产生正确数量的主动及衍生技能；Worker 再返回最多 16 个多样化候选。主线程把这些候选与当前预设基线统一交给正式 `秒伤计算`，按正式 DPS 选出最终胜者，UI 只展示胜者的玩家按键序列并通过集中图标映射渲染。
+**Architecture:** 先把奇穴“如风”的 8% 加速接入问水诀动作帧计算，使合法 Excel 基线能产生正确数量的主动及衍生技能；Worker 再返回最多 16 个多样化候选。主线程把这些候选与当前预设基线统一交给正式 `秒伤计算`，按正式 DPS 选出最终胜者，UI 只展示胜者的玩家按键序列并通过集中图标映射渲染。
 
 **Tech Stack:** TypeScript、React 18、Redux Toolkit、Ant Design 5、Jest、Testing Library、Web Worker
 
@@ -21,31 +21,33 @@
 
 ---
 
-### Task 1: 修正问水倒读条动作推进并锁定 220 秒基线数量
+### Task 1: 补齐如风加速并锁定 220 秒基线数量
 
 **Files:**
 
 - Modify: `src/功能模块/基础设置/公用设置/循环模拟/心法循环模拟/问水诀/simulator/engine.ts`
+- Modify: `src/功能模块/基础设置/公用设置/循环模拟/心法循环模拟/问水诀/simulator/time.ts`
+- Modify: `src/功能模块/基础设置/公用设置/循环模拟/心法循环模拟/问水诀/simulator/baseline-execution.ts`
 - Modify: `src/功能模块/基础设置/公用设置/循环模拟/心法循环模拟/问水诀/simulator/heavy-skills.test.ts`
 - Modify: `src/功能模块/基础设置/公用设置/循环模拟/心法循环模拟/问水诀/simulator/baseline-execution.test.ts`
 
 **Interfaces:**
 
 - Consumes: `执行动作(state, 技能名称, context)`、`执行Excel基线(state, baseline, context)`。
-- Produces: 倒读条命中帧与公共 GCD 独立推进；220 秒 Excel 基线能执行与预设主动技能数量一致的合法前缀。
+- Produces: 如风的 `82/1024` 郭氏加速同时进入 GCD 和读条帧计算；220 秒 Excel 基线能执行与预设主动技能数量一致的合法前缀。
 
-- [ ] **Step 1: 写云飞命中延迟不延长公共 GCD 的失败测试**
+- [ ] **Step 1: 写如风加速影响云飞动作帧的失败测试**
 
 在 `heavy-skills.test.ts` 增加：
 
 ```ts
-it('云飞倒读条只延迟命中且下一技能按公共 GCD 开始', () => {
-  const 第一次 = 执行动作(创建重剑状态(), '云飞玉皇')
-  const 第二次 = 执行动作({ ...第一次.状态, 剑气: 100 }, '夕照雷峰')
+it('如风八点加速率进入云飞公共 GCD 和读条帧', () => {
+  const 普通 = 执行动作(创建重剑状态(), '云飞玉皇')
+  const 如风 = 执行动作(创建重剑状态(), '云飞玉皇', { 奇穴: ['如风'] })
 
-  expect(第一次.状态.技能记录[0].命中帧).toBeGreaterThan(第一次.状态.GCD.公共)
-  expect(第二次.成功).toBe(true)
-  expect(第二次.状态.技能记录.at(-1)?.开始帧).toBe(第一次.状态.GCD.公共)
+  expect(普通.状态.GCD.公共).toBe(22)
+  expect(如风.状态.GCD.公共).toBe(20)
+  expect(如风.状态.技能记录[0].命中帧).toBe(20)
 })
 ```
 
@@ -57,20 +59,33 @@ Run:
 npx jest --runTestsByPath 'src/功能模块/基础设置/公用设置/循环模拟/心法循环模拟/问水诀/simulator/heavy-skills.test.ts' --watchAll=false --runInBand
 ```
 
-Expected: FAIL，第二个技能的开始帧晚于第一个技能的公共 GCD。
+Expected: FAIL，如风结果仍为 `22` 帧。
 
-- [ ] **Step 3: 最小修改公共 GCD 计算**
+- [ ] **Step 3: 将如风郭氏加速传入动作帧计算**
 
-在 `engine.ts` 的 `应用技能变化` 中，将公共 GCD 从读条和 GCD 的最大值改为只使用 GCD；`命中帧` 仍保留读条延迟：
+在 `time.ts` 扩展 wrapper：
 
 ```ts
-GCD: {
-  ...state.GCD,
-  公共: 技能.不受公共GCD ? state.GCD.公共 : 开始帧 + GCD帧,
-},
+export const 获取问水实际帧数 = (原始帧数: number, 加速值: number, 郭氏加速 = 0) =>
+  获取实际帧数(原始帧数, 加速值, 郭氏加速)
 ```
 
-不得修改 `命中帧 = 开始帧 + 读条帧`，也不得提前结算命中回剑或伤害事件。
+在 `engine.ts` 增加具名常量与 helper：
+
+```ts
+const 如风郭氏加速 = 82
+
+const 获取奇穴郭氏加速 = (context: 问水动作上下文) =>
+  context.奇穴?.includes('如风') ? 如风郭氏加速 : 0
+```
+
+`获取读条帧` 和 `应用技能变化` 的 GCD 帧都调用：
+
+```ts
+获取问水实际帧数(基础帧数, state.加速值, 获取奇穴郭氏加速(context))
+```
+
+不得修改读条与公共 GCD 的现有 `Math.max` 关系，也不得改变技能命中、回剑和伤害事件时序。
 
 - [ ] **Step 4: 运行重剑动作测试并确认通过**
 
@@ -94,7 +109,7 @@ it('220 秒斩岳基线按 Excel GCD 推进并覆盖预设主动技能数量', (
     剑气: 100,
   }
   const result = 执行Excel基线(initial, 获取Excel基线('紫武', '斩岳'), {
-    奇穴: ['叠锋意', '斩岳', '造化', '山倾', '层云', '雾锁', '怜光'],
+    奇穴: ['叠锋意', '斩岳', '造化', '山倾', '层云', '雾锁', '怜光', '如风'],
     秘籍: { 夕照雷峰: ['4%伤害', '3%伤害'] },
   })
   const counts = result.状态.技能记录.reduce<Record<string, number>>((map, item) => {
@@ -103,10 +118,11 @@ it('220 秒斩岳基线按 Excel GCD 推进并覆盖预设主动技能数量', (
   }, {})
 
   expect(result.成功).toBe(true)
+  expect(result.状态.当前帧).toBe(3518)
   expect(counts['听雷-轻']).toBe(4)
-  expect(counts['夕照雷峰']).toBeGreaterThanOrEqual(86)
-  expect((counts['云飞玉皇'] || 0) + (counts['云景·云飞玉皇'] || 0)).toBeGreaterThanOrEqual(62)
-  expect(counts['鹤归孤山']).toBeGreaterThanOrEqual(15)
+  expect(counts['夕照雷峰']).toBe(85)
+  expect((counts['云飞玉皇'] || 0) + (counts['云景·云飞玉皇'] || 0)).toBe(61)
+  expect(counts['鹤归孤山']).toBe(15)
   expect(counts['风来吴山']).toBe(3)
 })
 ```
@@ -119,15 +135,17 @@ Run:
 npx jest --runTestsByPath 'src/功能模块/基础设置/公用设置/循环模拟/心法循环模拟/问水诀/simulator/baseline-execution.test.ts' --watchAll=false --runInBand
 ```
 
-Expected: PASS，且听雷、夕照、云飞、鹤归和风来的数量全部满足上述断言。失败时检查 GCD、网络延迟和结束帧推进，不得降低预设数量断言。
+Expected: PASS。夕照和云飞各比预设聚合统计少一个结束边界动作；最终 DPS 下界仍由正式预设候选保证，不得再扩大这项边界差。
 
 - [ ] **Step 7: 提交模拟规则修复**
 
 ```bash
 git add 'src/功能模块/基础设置/公用设置/循环模拟/心法循环模拟/问水诀/simulator/engine.ts' \
+  'src/功能模块/基础设置/公用设置/循环模拟/心法循环模拟/问水诀/simulator/time.ts' \
+  'src/功能模块/基础设置/公用设置/循环模拟/心法循环模拟/问水诀/simulator/baseline-execution.ts' \
   'src/功能模块/基础设置/公用设置/循环模拟/心法循环模拟/问水诀/simulator/heavy-skills.test.ts' \
   'src/功能模块/基础设置/公用设置/循环模拟/心法循环模拟/问水诀/simulator/baseline-execution.test.ts'
-git commit -m 'fix: align wenshui cast timeline with gcd'
+git commit -m 'fix: include rufeng haste in wenshui simulator'
 ```
 
 ### Task 2: 让 Worker 返回有界多候选集合
