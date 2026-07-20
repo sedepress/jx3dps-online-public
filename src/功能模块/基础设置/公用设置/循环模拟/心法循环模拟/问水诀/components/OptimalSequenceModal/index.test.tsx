@@ -274,6 +274,7 @@ describe('问水诀最优序列控制器', () => {
 
     expect(display.预期DPS).toBeGreaterThanOrEqual(task.当前循环基线?.DPS || 0)
     expect(display.是否优于当前循环).toBe(false)
+    expect(display.技能序列.length).toBeGreaterThan(0)
     expect(display.技能详情.some((skill) => skill.技能名称 === '听雷-轻')).toBe(true)
   })
 })
@@ -337,10 +338,10 @@ const 创建展示结果 = (): 问水优化展示结果 => ({
   配置指纹: 'fingerprint-1',
   技能序列: ['听雷-轻', '啸日', '云飞玉皇'],
   条件规则: [{ 技能名称: '断潮', 回退动作: '听雷-重' }],
-    技能详情: [
+  技能详情: [
     { 技能名称: '云飞玉皇', 技能数量: 2.5 },
     { 技能名称: '断潮', 技能数量: 0.75 },
-    ],
+  ],
   结果来源: '搜索候选',
   预期DPS: 1000,
   搜索耗时: 1200,

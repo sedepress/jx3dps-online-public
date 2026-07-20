@@ -219,11 +219,9 @@ export const 推进问水Beam会话 = (session: 问水Beam会话, chunkBudget: n
 }
 
 export const 获取问水Beam会话结果 = (session: 问水Beam会话) => {
-  const 候选列表 = session.runtime.terminals.length
-    ? session.runtime.terminals.slice().sort(比较问水搜索候选)
-    : [session.runtime.best]
+  const 候选列表 = 记录终点候选(session.runtime.terminals, [session.runtime.best])
   return {
-    最佳候选: session.runtime.frontier.length ? session.runtime.best : 候选列表[0],
+    最佳候选: 候选列表[0],
     候选列表,
     扩展节点数: session.runtime.expanded,
     结束原因: session.runtime.frontier.length

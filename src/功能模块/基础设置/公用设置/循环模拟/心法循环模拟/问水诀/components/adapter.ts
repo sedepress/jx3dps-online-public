@@ -11,10 +11,7 @@ import { 问水Runner结果 } from '../search/runner'
 import { 问水搜索任务 } from './OptimalSequenceModal'
 import { 问水优化展示结果 } from './SearchResult'
 import { 创建问水优化搜索任务, 创建问水配置指纹 } from './controller'
-import {
-  精确重排问水展示候选,
-  问水展示候选,
-} from './exact-candidates'
+import { 获取问水候选展示序列, 精确重排问水展示候选, 问水展示候选 } from './exact-candidates'
 import { 问水搜索候选 } from '../search/exhaustive-oracle'
 
 interface 问水主线程适配参数 {
@@ -177,9 +174,7 @@ export const 创建当前问水搜索任务 = (params: 问水主线程适配参�
   return {
     ...task,
     当前循环基线:
-      baseline && baselineSequence?.length
-        ? { ...baseline, 技能序列: baselineSequence }
-        : baseline,
+      baseline && baselineSequence?.length ? { ...baseline, 技能序列: baselineSequence } : baseline,
   }
 }
 
@@ -243,9 +238,7 @@ export const 转换当前问水搜索结果 = (
   const baseline = task.当前循环基线
   const search = (result.候选列表 || [result.最佳候选])
     .map(转换搜索候选)
-    .filter(
-      (candidate): candidate is Extract<问水展示候选, { 来源: '搜索候选' }> => !!candidate,
-    )
+    .filter((candidate): candidate is Extract<问水展示候选, { 来源: '搜索候选' }> => !!candidate)
   const ranked = 精确重排问水展示候选({
     预设: 创建预设候选(baseline),
     候选: search,
@@ -254,10 +247,11 @@ export const 转换当前问水搜索结果 = (
   if (!ranked.成功) throw new Error(ranked.失败原因)
   const winner = ranked.候选[0]
   const improved = winner.来源 === '搜索候选' && 是否真实提升(winner.DPS, baseline?.DPS)
+  const sequence = 获取问水候选展示序列(winner, task.搜索参数.基线动作序列, result.最佳候选.主序列)
   return {
     战斗时间: task.战斗时间,
     配置指纹: task.配置指纹,
-    技能序列: winner.技能序列,
+    技能序列: sequence,
     条件规则: winner.条件规则,
     技能详情: winner.技能详情,
     结果来源: winner.来源,

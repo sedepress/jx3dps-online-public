@@ -6,6 +6,7 @@ import { 初始化心法数据 } from '@/数据/数据工具/获取当前数据'
 import 心法配置 from '@/心法模块/心法/问水诀'
 import { 默认团队增益轴 } from '@/工具函数/init/默认数据'
 import { 创建当前问水搜索任务, 转换当前问水搜索结果 } from '../components/adapter'
+import { 获取默认问水图标, 技能图标地址 } from '../components/skill-icons'
 import { 聚合问水策略, 转换问水聚合项为循环 } from '../damage/aggregate-policy'
 import { 问水伤害计算上下文 } from '../damage/build-damage-table'
 import { 创建问水伤害快照, 创建问水增益签名解析器 } from '../damage/context'
@@ -246,6 +247,9 @@ describe('问水诀 Worker 完整管线性能基准', () => {
         heapGrowthMiB: 转换MiB(peakHeap - initialHeap),
         exactRerankElapsedMs: exact.rerankElapsedMs,
         baselineDps: Number(baselineDps.toFixed(2)),
+        approximateBestModelDps: Number((result.最佳候选.期望总伤 / 战斗时间).toFixed(2)),
+        approximateBestExactDps: Number(exact.reranked[0].精确DPS.toFixed(2)),
+        approximateBestSequenceLength: result.最佳候选.主序列.length,
         bestDps: Number(display.预期DPS.toFixed(2)),
         resultSource: display.结果来源,
         candidateCount: result.候选列表.length,
@@ -270,7 +274,11 @@ describe('问水诀 Worker 完整管线性能基准', () => {
       expect(result.是否提前结束).toBe(false)
       expect(result.候选列表.length).toBeGreaterThanOrEqual(1)
       expect(result.候选列表.length).toBeLessThanOrEqual(16)
+      expect(result.候选列表).toContainEqual(result.最佳候选)
       expect(display.技能序列.length).toBeGreaterThan(0)
+      expect(display.技能序列.every((skill) => 技能图标地址(skill) !== 获取默认问水图标())).toBe(
+        true,
+      )
       expect(display.预期DPS).toBeGreaterThanOrEqual(baselineDps)
       expect(Number.isFinite(improvement)).toBe(true)
     },

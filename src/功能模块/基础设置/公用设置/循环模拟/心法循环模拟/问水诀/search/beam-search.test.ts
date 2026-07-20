@@ -23,6 +23,22 @@ const 派生技能伤害: Record<string, number> = {
 const 技能伤害 = { ...主技能伤害, ...派生技能伤害 }
 
 describe('问水诀 Beam Search', () => {
+  it('搜索收敛时不会丢弃高于终点池的已知最佳基线', () => {
+    const config = 创建搜索配置(2)
+    const result = 搜索问水Beam策略({
+      ...config,
+      主技能: [],
+      Beam宽度: 2,
+      扩展预算: 100,
+      基线动作序列: ['听雷-轻'],
+    })
+
+    expect(result.成功).toBe(true)
+    if (!result.成功) return
+    expect(result.最佳候选.主序列).toEqual(['听雷-轻'])
+    expect(result.候选列表).toContainEqual(result.最佳候选)
+  })
+
   it('保留多个完整终点候选并按近似伤害降序返回', () => {
     const result = 搜索问水Beam策略({
       ...创建搜索配置(5),

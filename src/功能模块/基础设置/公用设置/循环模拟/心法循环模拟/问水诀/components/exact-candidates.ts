@@ -25,10 +25,7 @@ type 问水展示候选重排结果 =
   | { 成功: true; 候选: 问水正式展示候选[] }
   | { 成功: false; 失败原因: string }
 
-const 复算候选 = (
-  candidate: 问水展示候选,
-  calculator: 精确重排问水展示候选参数['计算DPS'],
-) => {
+const 复算候选 = (candidate: 问水展示候选, calculator: 精确重排问水展示候选参数['计算DPS']) => {
   const dps = calculator(candidate)
   if (!Number.isFinite(dps) || (dps as number) < 0) return undefined
   return { ...candidate, DPS: dps as number }
@@ -49,4 +46,18 @@ export const 精确重排问水展示候选 = ({
   )
   if (!ranked.length) return { 成功: false, 失败原因: '没有可用的正式复算候选' }
   return { 成功: true, 候选: ranked }
+}
+
+export const 获取问水候选展示序列 = (
+  winner: 问水展示候选,
+  baselineSequence: string[] | undefined,
+  bestKnownSequence: string[],
+) => {
+  const sequence = winner.技能序列.length
+    ? winner.技能序列
+    : baselineSequence?.length
+      ? baselineSequence
+      : bestKnownSequence
+  if (!sequence.length) throw new Error('最终候选缺少可展示的玩家按键序列')
+  return sequence
 }
