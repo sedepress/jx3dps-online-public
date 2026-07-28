@@ -19,6 +19,7 @@ import 秒伤结果对比 from './功能组件/秒伤结果对比'
 import 配装导出 from './功能组件/配装导出'
 import 配装起内切换循环 from './功能组件/配装起内切换循环'
 import 大附魔选择 from './功能组件/大附魔选择'
+import 配装方案管理 from './功能组件/配装方案管理'
 import 渐变特效文字 from './功能组件/装备选择/装备部位选择/渐变特效文字'
 import { 普通至英雄 } from './功能组件/配装组件标题/装备选择范围设置'
 
@@ -258,6 +259,7 @@ function 配装器(props: ModalProps) {
         <div className={styles.footer} translate='no'>
           <配装起内切换循环 />
           <div>
+            <配装方案管理 获取表单信息={获取表单信息} 保存数据并计算={保存数据并计算} />
             <Button onClick={一键截图}>配装截图</Button>
             <Button
               danger
