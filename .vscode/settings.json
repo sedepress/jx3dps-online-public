@@ -1,0 +1,24 @@
+{
+  "conventionalCommits.scopes": [
+    "common",
+    "计算",
+    "装备",
+    "系数",
+    "蓬莱",
+    "版本发布",
+    "功能",
+    "衍天",
+    "万灵",
+    "花间"
+  ],
+  // "files.autoSaveWhenNoErrors": true,
+  // "files.autoSaveWorkspaceFilesOnly": true,
+  "editor.formatOnSave": true,
+  "prettier.requireConfig": false, // 允许无配置文件时使用 Prettier 默认规则
+
+  // Auto fix
+  "editor.codeActionsOnSave": {
+    "source.fixAll.eslint": "explicit",
+    "source.organizeImports": "never"
+  }
+}
